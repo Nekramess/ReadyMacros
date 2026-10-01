@@ -111,6 +111,13 @@ ns.CLASSES = {
     specs = { "Holy", "Protection", "Retribution" },
     macros = {
       Utility = {
+        -- Blessings and Purify fall back to yourself, not your target, when you aren't hovering a friendly unit.
+        { name = "MO BoP", desc = "Blessing of Protection on mouseover, else yourself",
+          body = "#showtooltip Blessing of Protection\n/cast [@mouseover,help,nodead][@player] Blessing of Protection", v = true },
+        { name = "MO Freedom", desc = "Blessing of Freedom on mouseover, else yourself",
+          body = "#showtooltip Blessing of Freedom\n/cast [@mouseover,help,nodead][@player] Blessing of Freedom", v = true },
+        { name = "MO Purify", desc = "Purify on mouseover, else yourself",
+          body = "#showtooltip Purify\n/cast [@mouseover,help,nodead][@player] Purify", v = true },
         { name = "MO Cleanse", desc = "Cleanse mouseover, else target",
           body = "#showtooltip\n/cast [@mouseover,help,nodead][] Cleanse", v = true },
         { name = "MO Flash", desc = "Flash of Light on mouseover, else target",

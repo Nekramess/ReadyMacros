@@ -43,7 +43,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 
 ## Known limits
 - Spell names are based on beta information and may change. 14 macros use a spell name that has not been confirmed yet, and they are marked in the list.
-- Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells only.
+- Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells and three Paladin spells (Purify, Blessing of Protection, Blessing of Freedom).
 - Spec detection is a best guess and may open the wrong spec tab.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
 - The spell ID report (`/rmac ids`), My Macros, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
