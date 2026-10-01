@@ -30,4 +30,9 @@ ns.SPELL_IDS = {
   ["Pummel"]           = { id = 6552,  level = 38 },
   ["Mortal Strike"]    = { id = 12294, level = 40, talent = true },
   ["Bloodthirst"]      = { id = 23881, level = 40, talent = true },
+
+  -- Paladin (checked on Wowhead's Forever database, 1 Oct 2026)
+  ["Purify"]                 = { id = 1152, level = 8 },
+  ["Blessing of Protection"] = { id = 1022, level = 10 },
+  ["Blessing of Freedom"]    = { id = 1044, level = 18 },
 }
