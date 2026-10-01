@@ -555,7 +555,7 @@ events:SetScript("OnEvent", function(_, event)
 end)
 
 ---------------------------------------------------------------------------
--- /mk ids: copyable spell ID report
+-- /rmac ids: copyable spell ID report
 ---------------------------------------------------------------------------
 local report = CreateFrame("Frame", "ReadyMacrosReport", UIParent, "BasicFrameTemplateWithInset")
 report:SetSize(620, 460)
@@ -596,7 +596,7 @@ local function ShowIDReport()
 end
 
 SLASH_READYMACROS1 = "/readymacros"
-SLASH_READYMACROS2 = "/mk"
+SLASH_READYMACROS2 = "/rmac"
 SlashCmdList.READYMACROS = function(msg)
   msg = (msg or ""):lower():match("^%s*(.-)%s*$")
   if msg == "ids" then

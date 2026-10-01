@@ -127,7 +127,7 @@ function ns.UnlearnedLabel(list)
 end
 
 ---------------------------------------------------------------------------
--- /mk ids report: every spell in your class's macros, checked against your client.
+-- /rmac ids report: every spell in your class's macros, checked against your client.
 ---------------------------------------------------------------------------
 local function ClassSpellNames(classKey)
   local set, names = {}, {}

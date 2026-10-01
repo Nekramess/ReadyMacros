@@ -5,10 +5,8 @@ One-click, character-specific macros for World of Warcraft: Forever, sorted by c
 ## Install
 Copy this folder into `Interface/AddOns/ReadyMacros`, then restart the game or `/reload`.
 
-Upgrading from MacroKit (the old name): delete `Interface/AddOns/MacroKit` first, since both use `/mk`.
-
 ## Commands
-- `/mk` or `/readymacros` open or close the window, `/mk ids` spell ID report for your class
+- `/rmac` or `/readymacros` open or close the window, `/rmac ids` spell ID report for your class
 
 ## What it does
 Ready Macros gives you a list of ready-made macros for every class and spec. Click a macro and it is created in your character-specific macro tab. You do not type anything or open the macro editor. Ready Macros also checks each macro's spells against your own spellbook, saves your own macros so you can add them on your other characters, and builds weapon swap macros from the weapons you have equipped.
@@ -31,7 +29,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 ## Spell check
 - For your own class, each macro is marked green when you know its spells, grey with the required level when you have not learned them yet, and orange when a spell may be renamed or missing. The tooltip explains which spell and why.
 - Macros for other classes are marked orange when their spell names have not been confirmed.
-- `/mk ids` shows a copyable report of every spell in your class's macros and its status. Spell IDs your client knows are recorded automatically.
+- `/rmac ids` shows a copyable report of every spell in your class's macros and its status. Spell IDs your client knows are recorded automatically.
 
 ## My Macros
 - **Import:** lists every macro on your current character. Click one to save it.
@@ -39,7 +37,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - **Weapon swap:** equip a weapon set and click Capture. Do this for two sets, for example one-hand and shield, then two-hand. Ready Macros reads the item names from your equipped gear and creates a macro for each set. Recapture and click again to update a macro after you change weapons.
 
 ## How to use
-- Type `/mk` or `/readymacros` to open or close the window.
+- Type `/rmac` or `/readymacros` to open or close the window.
 - Pick a class and a spec tab, then click a macro to add it.
 - Open the game's macro window with `/macro` and drag the new macro to your action bar.
 
@@ -48,4 +46,4 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells only.
 - Spec detection is a best guess and may open the wrong spec tab.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
-- Features added in v0.5 and later (`/mk ids`, My Macros, weapon swap, paging) have so far been tested only against a simulated game API, not in the live client.
+- The spell ID report (`/rmac ids`), My Macros, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
