@@ -2,7 +2,7 @@
 ## Title: Ready Macros
 ## Notes: One-click character-specific macros by class and spec
 ## Author: Anthony
-## Version: 0.7.0
+## Version: 0.7.1
 ## SavedVariables: ReadyMacrosDB
 Data.lua
 SpellIDs.lua
