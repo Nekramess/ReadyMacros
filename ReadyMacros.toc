@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Ready Macros
+## Notes: One-click character-specific macros by class and spec
+## Author: Anthony
+## Version: 0.7.0
+## SavedVariables: ReadyMacrosDB
+Data.lua
+SpellIDs.lua
+Verify.lua
+Library.lua
+ReadyMacros.lua

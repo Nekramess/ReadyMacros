@@ -1,0 +1,4 @@
+package-as: ReadyMacros
+ignore:
+  - README.md
+  - docs
