@@ -6,6 +6,9 @@ local M = { frames = {}, printed = {}, macros = {}, equipped = {}, known = {}, i
 local function newObj(kind)
   local o = { _kind = kind, _shown = true, _scripts = {}, _text = "", _enabled = true }
   return setmetatable(o, { __index = function(_, k)
+    -- Plain data fields the addon reads must be nil until set (unknown keys otherwise
+    -- return a no-op method, which is truthy).
+    if k == "dragging" then return nil end
     local methods = {
       SetScript = function(self, n, f) self._scripts[n] = f end,
       GetScript = function(self, n) return self._scripts[n] end,
@@ -20,6 +23,12 @@ local function newObj(kind)
       CreateFontString = function() return newObj("FontString") end,
       CreateTexture = function() return newObj("Texture") end,
       GetFontString = function() return newObj("FontString") end,
+      -- Anchors are only recorded (lastPoint = { point, relativeTo, relativePoint, x, y }).
+      ClearAllPoints = function(self) self.lastPoint = nil end,
+      SetPoint = function(self, p, rel, rp, x, y)
+        if type(rel) ~= "table" then rel, rp, x, y = nil, rel, rp, x end  -- (point, x, y) form
+        self.lastPoint = { p, rel, rp, x, y }
+      end,
     }
     return methods[k] or function() end
   end })
@@ -31,7 +40,23 @@ function M.install(opts)
   M.known = opts.known or {}
   M.ids = opts.ids or {}
   for name, id in pairs(M.known) do M.ids[id] = name end
-  CreateFrame = function(kind) local f = newObj(kind); M.frames[#M.frames + 1] = f; return f end
+  CreateFrame = function(kind, name)
+    local f = newObj(kind); M.frames[#M.frames + 1] = f
+    if type(name) == "string" then _G[name] = f end   -- named frames become globals, as in the client
+    return f
+  end
+  -- Minimap support. Forever's UI source defines the Minimap frame (Blizzard_Minimap) and
+  -- GetCursorPosition (InputDocumentation.lua) but NO GetMinimapShape: that global comes
+  -- from minimap addons, so install() never defines it. Tests set/clear _G.GetMinimapShape.
+  M.cursor, M.timers = { 0, 0 }, {}
+  GetCursorPosition = function() return M.cursor[1], M.cursor[2] end
+  C_Timer = { After = function(_, fn) M.timers[#M.timers + 1] = fn end }
+  GetMinimapShape = nil
+  local mm = newObj("Minimap")
+  mm.GetWidth, mm.GetHeight = function() return 140 end, function() return 140 end
+  mm.GetCenter = function() return 1000, 500 end   -- centre in UIParent units (may return nothing in the real client)
+  mm.GetEffectiveScale = function() return 1 end
+  Minimap = mm
   UIParent, GameTooltip = newObj("Frame"), newObj("GameTooltip")
   UISpecialFrames, SlashCmdList, ChatFontNormal = {}, {}, {}
   tinsert, unpack = table.insert, unpack or table.unpack
@@ -66,6 +91,11 @@ function M.install(opts)
     local id = M.known[x]; return id and { name = x, spellID = id } or nil
   end }
   IsPlayerSpell = function(id) local n = M.ids[id]; return n ~= nil and M.known[n] ~= nil end
+  -- Forever's real namespaces (Blizzard_APIDocumentationGenerated: SpellBookDocumentation, SpecializationInfoDocumentation)
+  Enum = Enum or {}
+  Enum.SpellBookSpellBank = { Player = 0, Pet = 1 }
+  C_SpellBook = { IsSpellKnown = function(id, bank) local n = M.ids[id]; return n ~= nil and M.known[n] ~= nil end }
+  C_SpecializationInfo = { GetSpecialization = function() return M.spec end }
 end
 
 -- Files listed in ReadyMacros.toc, in load order.
@@ -125,6 +155,12 @@ function M.press(text) local b = M.button(text); b._scripts.OnClick(b) end
 function M.icon(key)
   for _, f in ipairs(M.frames) do if rawget(f, "key") == key then return f end end
   error("no class icon " .. key, 2)
+end
+
+-- Run and clear pending C_Timer.After callbacks (delay is ignored).
+function M.runTimers()
+  local t = M.timers; M.timers = {}
+  for _, fn in ipairs(t) do fn() end
 end
 
 function M.lastPrint() return M.printed[#M.printed] or "" end

@@ -51,11 +51,13 @@ local function SetClassIcon(tex, key)
   end
 end
 
--- Best-effort spec detection. Forever's talent API isn't documented yet, so this only
--- trusts GetSpecialization() when it returns a sensible index; otherwise returns nil.
+-- Best-effort spec detection. Forever documents C_SpecializationInfo.GetSpecialization (the global is only a
+-- deprecated shim there, gated by the loadDeprecationFallbacks CVar), so try that first. Only trusts a
+-- sensible index; otherwise returns nil.
 local function DetectSpecIndex(numSpecs)
-  if GetSpecialization then
-    local ok, idx = pcall(GetSpecialization)
+  local fn = (C_SpecializationInfo and C_SpecializationInfo.GetSpecialization) or GetSpecialization
+  if fn then
+    local ok, idx = pcall(fn)
     if ok and type(idx) == "number" and idx >= 1 and idx <= numSpecs then return idx end
   end
 end

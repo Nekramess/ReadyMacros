@@ -41,7 +41,14 @@ local function RecordSeen(name, info)
   end
 end
 
+-- Forever documents C_SpellBook.IsSpellKnown(spellID, spellBank); the global IsPlayerSpell is only a deprecated
+-- shim there (Blizzard_DeprecatedSpellBook, gated by the loadDeprecationFallbacks CVar), so try the namespace first.
 local function KnownByID(id)
+  if C_SpellBook and C_SpellBook.IsSpellKnown then
+    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player
+    local ok, known = pcall(C_SpellBook.IsSpellKnown, id, bank)
+    if ok and known then return true end
+  end
   if IsPlayerSpell then
     local ok, known = pcall(IsPlayerSpell, id)
     if ok and known then return true end

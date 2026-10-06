@@ -86,4 +86,21 @@ T.eq(ReadyMacrosDB.seenIDs and ReadyMacrosDB.seenIDs["Victory Rush"], 555001, "s
 T.known["Victory Rush"] = nil
 T.eq(ns.CheckSpell("Victory Rush"), "unlearned", "recorded ID used after the spell is unlearned")
 
+-- Forever has no global IsPlayerSpell unless the deprecation CVar is on; only C_SpellBook.IsSpellKnown.
+-- To make "known by ID" decisive, the spell's name no longer resolves (not in T.known) but its ID still does.
+local legacy, book = IsPlayerSpell, C_SpellBook
+local hsID = ns.SPELL_IDS["Heroic Strike"].id
+T.known = { Charge = 100 }
+IsPlayerSpell = nil
+C_SpellBook = { IsSpellKnown = function(id, bank) return id == hsID and bank == Enum.SpellBookSpellBank.Player end }
+T.eq(ns.CheckSpell("Heroic Strike"), "known", "Forever-like client (no IsPlayerSpell global): known through C_SpellBook.IsSpellKnown(id, Player)")
+C_SpellBook = { IsSpellKnown = function() return false end }
+T.eq(ns.CheckSpell("Heroic Strike"), "unlearned", "Forever-like client: C_SpellBook says not known -> unlearned")
+C_SpellBook = { IsSpellKnown = function() error("boom") end }
+T.eq(ns.CheckSpell("Heroic Strike"), "unlearned", "C_SpellBook error is contained (pcall) -> unlearned, no crash")
+C_SpellBook = nil
+IsPlayerSpell = function(id) return id == hsID end
+T.eq(ns.CheckSpell("Heroic Strike"), "known", "retail-like client (global only, no C_SpellBook): still known")
+IsPlayerSpell, C_SpellBook = legacy, book
+
 T.done("test_spellcheck")
