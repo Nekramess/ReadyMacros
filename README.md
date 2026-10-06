@@ -6,7 +6,7 @@ One-click, character-specific macros for World of Warcraft: Forever, sorted by c
 Copy this folder into `Interface/AddOns/ReadyMacros`, then restart the game or `/reload`.
 
 ## Commands
-- `/rmac` or `/readymacros` open or close the window, `/rmac ids` spell ID report for your class
+- `/rmac` or `/readymacros` open or close the window, `/rmac ids` spell ID report for your class, `/rmac minimap on|off|square|round|auto` minimap button
 
 ## What it does
 Ready Macros gives you a list of ready-made macros for every class and spec. Click a macro and it is created in your character-specific macro tab. You do not type anything or open the macro editor. Ready Macros also checks each macro's spells against your own spellbook, saves your own macros so you can add them on your other characters, and builds weapon swap macros from the weapons you have equipped.

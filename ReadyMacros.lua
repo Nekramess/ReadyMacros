@@ -595,13 +595,20 @@ local function ShowIDReport()
   if frame:IsShown() then Refresh() end
 end
 
+function ns.ToggleWindow()
+  frame:SetShown(not frame:IsShown())
+end
+
 SLASH_READYMACROS1 = "/readymacros"
 SLASH_READYMACROS2 = "/rmac"
 SlashCmdList.READYMACROS = function(msg)
   msg = (msg or ""):lower():match("^%s*(.-)%s*$")
-  if msg == "ids" then
+  local cmd, rest = msg:match("^(%S*)%s*(.-)$")
+  if cmd == "ids" then
     ShowIDReport()
+  elseif cmd == "minimap" then
+    if ns.MinimapCommand then ns.MinimapCommand(rest) end
   else
-    frame:SetShown(not frame:IsShown())
+    ns.ToggleWindow()
   end
 end
