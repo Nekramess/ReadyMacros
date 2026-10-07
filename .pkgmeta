@@ -5,3 +5,4 @@ ignore:
   - tools
   - .github
   - CLAUDE.md
+  - releases

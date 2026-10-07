@@ -28,6 +28,7 @@ The addon was renamed before release. Never reintroduce the previous addon name 
 | `Library.lua` | Saved macros (account-wide) and weapon swap sets (per character) |
 | `ReadyMacros.lua` | Window, class icons, tabs, paging, rows, tooltips, events, slash commands, `/rmac ids` report |
 | `tools/package.sh` | Builds `ReadyMacros-v<Version>-forever.zip` from the `.toc` |
+| `tools/release.sh`, `tools/check-release.sh`, `releases/` | `release.sh` stores the current zip in `releases/` (the one place to download it for CurseForge); `check-release.sh` (run by the `Tests` Action) fails if that zip is missing, misnamed or stale |
 | `tools/run-tests.sh`, `tools/tests/` | Tests with a simulated client |
 | `.github/workflows/package.yml` | Builds the zip and creates a GitHub Release |
 | `docs/logo.png` | 400x400 CurseForge logo |
@@ -73,17 +74,18 @@ The mock in `tools/tests/wowmock.lua` is not the game. Passing tests prove logic
 
 ## Releasing
 
-1. Bump `## Version` in `ReadyMacros.toc`; update README (Known limits, counts).
-2. `bash tools/run-tests.sh`.
-3. `bash tools/package.sh` -> `dist/ReadyMacros-v<Version>-forever.zip` (contains only `ReadyMacros/` with the `.toc` and the files it lists). Or after merge: Actions > Package > Run workflow, which creates release `v<Version>`; it refuses a version that already has a release. The workflow has not yet been run on GitHub.
-4. Anthony uploads to CurseForge (game version: Forever, release type: Release).
+The current release zip lives in the repo: `releases/ReadyMacros-v<Version>-forever.zip` (exactly one zip). Full text: `docs/RELEASING.md`.
+
+- One piece of work = one branch = one PR. While Anthony is testing and changes go back and forth, add commits to the same branch and PR and keep `## Version` as it is; run `bash tools/release.sh` in every commit that changes addon files so the zip in the repo is the one he tests.
+- The version is finalized only when Anthony says "push": set the number in `ReadyMacros.toc`, update README (Known limits, counts), run `bash tools/run-tests.sh` and `bash tools/release.sh`, then push to the same PR.
+- After merge Anthony downloads `releases/<zip>` from `main` and uploads it to CurseForge as is (game version: Forever, release type: Release). Or Actions > Package > Run workflow creates release `v<Version>`; it refuses a version that already has a release. That workflow has not yet been run on GitHub.
 
 ## Git workflow
 
 - Never commit to `main`. Use a branch and open a PR; Anthony merges.
 - `gh` is not installed in the cloud sessions. Open PRs with the GitHub API: `curl -X POST https://api.github.com/repos/Nekramess/ReadyMacros/pulls -H "Content-Type: application/json" --data-binary @body.json` (the Content-Type header is required).
 - Shallow clones only track `main`; after pushing a branch run `git config --replace-all remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*' && git fetch` so the branch shows as pushed.
-- `*.zip` is gitignored.
+- `*.zip` is gitignored except `releases/` (the stored release zip).
 
 ## Open items
 
