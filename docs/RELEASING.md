@@ -7,14 +7,14 @@ Every release zip is named **`<Addon>-v<Version>-forever.zip`**, nothing else:
 | Part | Value for this addon | Where it comes from |
 |---|---|---|
 | `<Addon>` | `ReadyMacros` (no spaces, same as the folder and the `.toc` name) | `package-as` in `.pkgmeta`, else the `.toc` file name |
-| `v<Version>` | `v0.8.0` | the `## Version:` line in `ReadyMacros.toc` |
+| `v<Version>` | `v0.8.1` | the `## Version:` line in `ReadyMacros.toc` |
 | `-forever` | always | marks the Forever build, like other Forever addons on CurseForge |
 
-Example: `ReadyMacros-v0.8.0-forever.zip`
+Example: `ReadyMacros-v0.8.1-forever.zip`
 
 Rules:
 - **Build the zip with `tools/package.sh`** (or the "Package" GitHub Action, which calls it). Never zip by hand and never rename the file. Both the script and the action already use this pattern.
-- **Upload the file exactly as built.** CurseForge shows the file name as the display name, so do not retype it in the upload form. Wrong: `v0.8.0 ReadyMacros.zip` (version first, with a space).
+- **Upload the file exactly as built.** CurseForge shows the file name as the display name, so do not retype it in the upload form. Wrong: `v0.8.1 ReadyMacros.zip` (version first, with a space).
 - **The display name in the game and on the project page can differ** (it is the `## Title:` in the `.toc`). The zip name, folder, `.toc` file name, saved variables and slash command keep the internal name so installs and settings carry over.
 - **One version, one file.** Bump `## Version:` for every release. Never upload a different build under a version number that already exists, and never re-upload a version under a new file name.
 - If a wrongly named file is already on CurseForge, upload the next version with the correct name and archive the wrong one. Do not delete it.

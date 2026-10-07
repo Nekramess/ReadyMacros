@@ -6,10 +6,11 @@ Owner: Anthony (GitHub `Nekramess`). He values verified facts over confident gue
 
 ## Current state (keep this section up to date)
 
-- Version 0.7.2, `## Interface: 16001` (the number the Forever beta client reports; Anthony checked it in-game on 30 Sep 2026 with `/run print(select(4, GetBuildInfo()))`).
-- Commands: `/readymacros`, `/rmac`, `/rmac ids`.
+- Version 0.8.1, `## Interface: 16001` (the number the Forever beta client reports; Anthony checked it in-game on 30 Sep 2026 with `/run print(select(4, GetBuildInfo()))`).
+- Commands: `/readymacros`, `/rmac`, `/rmac ids`, `/rmac minimap on|off|square|round|auto`.
 - Seen working in the live client: class icon row, spec tabs, spell check colors and level labels (on a level 9 Warrior).
-- Tested only with the simulated client in `tools/tests/`: `/rmac ids`, My Macros, weapon swap, paging, `/startattack` changes, the Paladin blessing macros.
+- Tested only with the simulated client in `tools/tests/`: `/rmac ids`, My Macros, weapon swap, paging, `/startattack` changes, the Paladin blessing macros, the minimap button (`Minimap.lua`, tested in `tools/tests/test_minimap.lua`; not yet seen in the live client; Forever's UI source does not define `GetMinimapShape`, it is an optional global that minimap addons define).
+- Forever API notes (checked against the Forever UI source, 6 Oct 2026): spec detection uses `C_SpecializationInfo.GetSpecialization` with the global as fallback, and "known by ID" uses `C_SpellBook.IsSpellKnown(id, Enum.SpellBookSpellBank.Player)` with `IsPlayerSpell` as fallback; both globals are only deprecated shims in Forever (CVar `loadDeprecationFallbacks`). Not confirmed in the live client.
 - Unconfirmed: whether `/equipslot` works in Forever (and in combat); whether `IsPlayerSpell(rank1ID)` is true once a higher rank is learned; spec detection (`GetSpecialization` may not exist or match in Forever).
 
 ## Naming rule
@@ -63,8 +64,10 @@ Name at most 16 characters; body at most 255; no duplicate name in a tab; the sa
 ## Testing
 
 ```
-bash tools/run-tests.sh      # needs Lua 5.1: apt-get install -y lua5.1
+bash tools/run-tests.sh      # needs Lua 5.1 (apt-get install -y lua5.1), or python3 + lupa (pip install lupa) as a fallback
 ```
+
+The `Tests` GitHub Action runs this and a package build on every PR.
 
 The mock in `tools/tests/wowmock.lua` is not the game. Passing tests prove logic, not rendering or real API behavior; say so when reporting results. When adding a feature, add a test and check it fails when the feature is broken.
 
