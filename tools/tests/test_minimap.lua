@@ -36,6 +36,10 @@ T.check(idx["Libs/LibStub/LibStub.lua"] < idx["Libs/CallbackHandler-1.0/Callback
   and idx["Libs/LibDataBroker-1.1/LibDataBroker-1.1.lua"] < idx["Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua"]
   and idx["Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua"] < idx["Minimap.lua"], "libraries load in dependency order, before Minimap.lua")
 
+-- The AddOn List shows a "?" unless the .toc names an icon (Forever reads ## IconTexture, Blizzard_AddOnList/AddonList.lua)
+local tocText = io.open("ReadyMacros.toc"):read("*a")
+T.check(tocText:find("## IconTexture: Interface\\Icons\\", 1, true), "toc names an IconTexture for the AddOn List")
+
 -- Registered through LibDBIcon, shown, anchored on the minimap edge
 local ns, M = fresh(nil)
 T.check(lib():IsRegistered("ReadyMacros"), "registered with LibDBIcon at PLAYER_LOGIN")

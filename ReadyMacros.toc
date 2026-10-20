@@ -1,4 +1,5 @@
 ## Interface: 16001
+## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## Title: Ready Macros
 ## Notes: One-click character-specific macros by class and spec
 ## Author: Anthony
