@@ -7,9 +7,9 @@ Owner: Anthony (GitHub `Nekramess`). He values verified facts over confident gue
 ## Current state (keep this section up to date)
 
 - Version 0.8.1, `## Interface: 16001` (the number the Forever beta client reports; Anthony checked it in-game on 30 Sep 2026 with `/run print(select(4, GetBuildInfo()))`).
-- Commands: `/readymacros`, `/rmac`, `/rmac ids`, `/rmac minimap on|off|square|round|auto`.
+- Commands: `/readymacros`, `/rmac`, `/rmac ids`, `/rmac minimap on|off`.
 - Seen working in the live client: class icon row, spec tabs, spell check colors and level labels (on a level 9 Warrior).
-- Tested only with the simulated client in `tools/tests/`: `/rmac ids`, My Macros, weapon swap, paging, `/startattack` changes, the Paladin blessing macros, the minimap button (`Minimap.lua`, tested in `tools/tests/test_minimap.lua`; not yet seen in the live client; Forever's UI source does not define `GetMinimapShape`, it is an optional global that minimap addons define).
+- Tested only with the simulated client in `tools/tests/`: `/rmac ids`, My Macros, weapon swap, paging, `/startattack` changes, the Paladin blessing macros, the minimap button (`Minimap.lua`, tested in `tools/tests/test_minimap.lua`, which loads the real embedded libraries; not yet seen in the live client). The button is registered through the standard LibDBIcon-1.0 (embedded in `Libs/`: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0, all from public GitHub copies, 20 Oct 2026). A hand-built button made a minimap button manager show "This is a custom button. Please ask the addon author to use the standard LibDBIcon library instead." (CurseForge comment seen 20 Oct 2026); never hand-build a minimap button. LibDBIcon follows `GetMinimapShape` itself, so the old `square|round|auto` options are gone (saved `angle` becomes `minimapPos`).
 - Forever API notes (checked against the Forever UI source, 6 Oct 2026): spec detection uses `C_SpecializationInfo.GetSpecialization` with the global as fallback, and "known by ID" uses `C_SpellBook.IsSpellKnown(id, Enum.SpellBookSpellBank.Player)` with `IsPlayerSpell` as fallback; both globals are only deprecated shims in Forever (CVar `loadDeprecationFallbacks`). Not confirmed in the live client.
 - Unconfirmed: whether `/equipslot` works in Forever (and in combat); whether `IsPlayerSpell(rank1ID)` is true once a higher rank is learned; spec detection (`GetSpecialization` may not exist or match in Forever).
 
@@ -25,6 +25,8 @@ The addon was renamed before release. Never reintroduce the previous addon name 
 | `Data.lua` | Every macro: `ns.CLASS_ORDER`, `ns.UTILITY` ("Utility" = the "All specs" tab), `ns.CLASSES` |
 | `SpellIDs.lua` | `ns.SPELL_IDS`: spell name -> `{ id, level, talent?, stance? }` |
 | `Verify.lua` | Spell check: parses `/cast` lines, `ns.CheckSpell`, `ns.CheckMacro`, `ns.UnlearnedLabel`, `ns.IDReport` |
+| `Libs/` | Embedded libraries (LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0), listed first in the `.toc` |
+| `Minimap.lua` | LibDataBroker launcher + LibDBIcon registration, `/rmac minimap` |
 | `Library.lua` | Saved macros (account-wide) and weapon swap sets (per character) |
 | `ReadyMacros.lua` | Window, class icons, tabs, paging, rows, tooltips, events, slash commands, `/rmac ids` report |
 | `tools/package.sh` | Builds `ReadyMacros-v<Version>-forever.zip` from the `.toc` |
