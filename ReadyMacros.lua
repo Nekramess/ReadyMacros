@@ -525,7 +525,7 @@ local function EditorClear()
   editingIndex = nil
   nameBox:SetText(""); bodyBox:SetText("")
   UpdateCounter()
-  editorNote:SetText("Type a name and the macro text, then Save. Saved macros appear under Saved on every character.")
+  editorNote:SetText("Save to list: keeps it for all your characters. Save and add here: also creates it on this character now.")
 end
 
 function ns.EditSaved(index)
@@ -551,12 +551,22 @@ end
 
 local saveBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
 saveBtn:SetSize(120, 24); saveBtn:SetPoint("BOTTOMLEFT", editor, "BOTTOMLEFT", 4, 4)
-saveBtn:SetText("Save macro")
+saveBtn:SetText("Save to list")
 saveBtn:SetScript("OnClick", function() EditorSave(false) end)
 local saveAddBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
 saveAddBtn:SetSize(150, 24); saveAddBtn:SetPoint("LEFT", saveBtn, "RIGHT", 6, 0)
 saveAddBtn:SetText("Save and add here")
 saveAddBtn:SetScript("OnClick", function() EditorSave(true) end)
+local function Tip(btn, text)
+  btn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(text, 1, 1, 1, true)
+    GameTooltip:Show()
+  end)
+  btn:SetScript("OnLeave", GameTooltip_Hide)
+end
+Tip(saveBtn, "Saves the macro to your list (Saved tab), shared by all your characters. Nothing is created on this character yet.")
+Tip(saveAddBtn, "Saves it to your list AND creates it on this character, so it appears in the game's macro window.")
 local clearBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
 clearBtn:SetSize(80, 24); clearBtn:SetPoint("LEFT", saveAddBtn, "RIGHT", 6, 0)
 clearBtn:SetText("Clear")

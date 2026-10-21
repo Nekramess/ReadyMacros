@@ -32,7 +32,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - `/rmac ids` shows a copyable report of every spell in your class's macros and its status. Spell IDs your client knows are recorded automatically.
 
 ## My Macros
-- **New macro:** type a name (up to 16 characters) and the macro text (up to 255), then click Save macro, or Save and add here to also create it on the current character. Saved macros appear under Saved on every character. Alt-click a saved macro to edit it.
+- **New macro:** type a name (up to 16 characters) and the macro text (up to 255), then click Save to list, or Save and add here to also create it on the current character. Saved macros appear under Saved on every character. Alt-click a saved macro to edit it.
 - **Import:** lists every macro on your current character. Click one to save it.
 - **Saved:** your saved macros, available on every character on your account. Click to add one to the current character. Alt-click to edit. Shift-click to remove it from the list.
 - **Weapon swap:** equip a weapon set and click Capture. Do this for two sets, for example one-hand and shield, then two-hand. Ready Macros reads the item names from your equipped gear and creates a macro for each set. Recapture and click again to update a macro after you change weapons.
