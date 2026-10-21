@@ -89,7 +89,7 @@ local function AddMacro(m, checkClass, allowUpdate)
     Print("Your character-specific macro slots are full.")
     return
   end
-  local id = CreateMacro(m.name, m.icon or ICON, m.body, true) -- true = character-specific tab
+  local id = CreateMacro(m.name, ns.MacroIcon(m), m.body, true) -- true = character-specific tab
   if not id then
     Print("Couldn't create \"" .. m.name .. "\".")
     return
@@ -245,13 +245,19 @@ end
 function ns.MacroIcon(m)
   if m.icon and m.icon ~= ICON then return m.icon end
   local body = m.body or ""
-  local spell = body:match("#showtooltip%s+([^\n]+)")
+  local spell = body:match("#showtooltip[ \t]+([^\n]+)")
   if not spell then
     local line = body:match("/cast%s+([^\n]+)") or body:match("/use%s+([^\n]+)")
     if line then spell = line:gsub("%b[]", ""):match("^%s*([^;]-)%s*$") end
   end
   if spell then
     spell = spell:match("^%s*(.-)%s*$")
+    -- Spell IDs we have on file work even when the spell isn't learned yet.
+    local entry = ns.SPELL_IDS and ns.SPELL_IDS[spell]
+    if entry and C_Spell and C_Spell.GetSpellTexture then
+      local ok, tex = pcall(C_Spell.GetSpellTexture, entry.id)
+      if ok and tex then return tex end
+    end
     local ok, info = pcall(C_Spell.GetSpellInfo, spell)
     if ok and type(info) == "table" and info.iconID then return info.iconID end
   end
@@ -488,15 +494,139 @@ end
 -- counter, Save / Cancel / Delete) so it feels familiar. It does not replace that window.
 ---------------------------------------------------------------------------
 local editor = CreateFrame("Frame", nil, frame)
-editor:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -110)
+editor:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140)
 editor:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 36)
 editor:Hide()
 local editingIndex
 
-local previewIcon = editor:CreateTexture(nil, "ARTWORK")
-previewIcon:SetSize(36, 36)
-previewIcon:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -6)
+---------------------------------------------------------------------------
+-- Icon picker: every icon the game offers for macros (GetLooseMacroIcons, GetMacroIcons and the
+-- item versions, the same lists the game's own icon selector reads), in a scrollable grid.
+---------------------------------------------------------------------------
+local chosenIcon
+local COLS, GRID_ROWS, CELL = 8, 9, 36
+local iconList
+local function IconTexturePath(v)
+  local id = tonumber(v)
+  if id then return id end
+  return "Interface\\Icons\\" .. tostring(v)
+end
+local function LoadIcons()
+  if iconList then return iconList end
+  iconList = {}
+  for _, fnName in ipairs({ "GetLooseMacroIcons", "GetMacroIcons", "GetLooseMacroItemIcons", "GetMacroItemIcons" }) do
+    local fn = _G[fnName]
+    if type(fn) == "function" then pcall(fn, iconList) end
+  end
+  return iconList
+end
+
+local picker = CreateFrame("Frame", "ReadyMacrosIconPicker", UIParent, "BasicFrameTemplateWithInset")
+picker:SetSize(COLS * CELL + 60, GRID_ROWS * CELL + 80)
+picker:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, 0)
+picker:SetFrameStrata("DIALOG")
+picker:EnableMouse(true)
+picker:Hide()
+tinsert(UISpecialFrames, "ReadyMacrosIconPicker")
+local pickerTitle = picker:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+pickerTitle:SetPoint("TOP", picker, "TOP", 0, -5)
+pickerTitle:SetText("Choose an icon")
+
+local pickerOffset = 0 -- first visible grid row (0-based)
+local pickerButtons = {}
+local pickerSlider
+local PickerRefresh
+local pickerCallback
+
+local function MaxOffset()
+  local n = #LoadIcons()
+  return math.max(0, math.ceil(n / COLS) - GRID_ROWS)
+end
+
+function PickerRefresh()
+  local list = LoadIcons()
+  for i, b in ipairs(pickerButtons) do
+    local idx = pickerOffset * COLS + i
+    local v = list[idx]
+    if v ~= nil then
+      b.iconValue = IconTexturePath(v)
+      b.tex:SetTexture(b.iconValue)
+      b:Show()
+    else
+      b.iconValue = nil
+      b:Hide()
+    end
+  end
+end
+
+local function PickerSetOffset(o)
+  o = math.min(math.max(math.floor(o + 0.5), 0), MaxOffset())
+  if o == pickerOffset then return end
+  pickerOffset = o
+  if pickerSlider then pickerSlider.updating = true; pickerSlider:SetValue(o); pickerSlider.updating = false end
+  PickerRefresh()
+end
+
+for i = 1, COLS * GRID_ROWS do
+  local b = CreateFrame("Button", nil, picker)
+  b:SetSize(CELL - 4, CELL - 4)
+  local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
+  b:SetPoint("TOPLEFT", picker, "TOPLEFT", 14 + col * CELL, -32 - row * CELL)
+  b.tex = b:CreateTexture(nil, "ARTWORK")
+  b.tex:SetAllPoints(b)
+  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  b:SetScript("OnClick", function(self)
+    if self.iconValue and pickerCallback then pickerCallback(self.iconValue) end
+    picker:Hide()
+  end)
+  pickerButtons[i] = b
+end
+
+pickerSlider = CreateFrame("Slider", nil, picker)
+pickerSlider:SetOrientation("VERTICAL")
+pickerSlider:SetSize(14, GRID_ROWS * CELL)
+pickerSlider:SetPoint("TOPRIGHT", picker, "TOPRIGHT", -12, -32)
+local sliderBg = pickerSlider:CreateTexture(nil, "BACKGROUND")
+sliderBg:SetAllPoints(pickerSlider)
+sliderBg:SetColorTexture(0, 0, 0, 0.5)
+local thumb = pickerSlider:CreateTexture(nil, "OVERLAY")
+thumb:SetColorTexture(1, 0.82, 0, 0.8)
+thumb:SetSize(14, 30)
+pickerSlider:SetThumbTexture(thumb)
+pickerSlider:SetMinMaxValues(0, 0)
+pickerSlider:SetValueStep(1)
+pickerSlider:SetScript("OnValueChanged", function(self, v)
+  if self.updating then return end
+  PickerSetOffset(v)
+end)
+picker:EnableMouseWheel(true)
+picker:SetScript("OnMouseWheel", function(_, delta) PickerSetOffset(pickerOffset - delta * 3) end)
+
+function ns.OpenIconPicker(callback)
+  pickerCallback = callback
+  pickerOffset = 0
+  local maxO = MaxOffset()
+  pickerSlider:SetMinMaxValues(0, maxO)
+  pickerSlider.updating = true; pickerSlider:SetValue(0); pickerSlider.updating = false
+  PickerRefresh()
+  if #LoadIcons() == 0 then Print("The game didn't give a list of icons to choose from.") end
+  picker:Show()
+end
+
+local iconBtn = CreateFrame("Button", nil, editor)
+iconBtn:SetSize(36, 36)
+iconBtn:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -6)
+local previewIcon = iconBtn:CreateTexture(nil, "ARTWORK")
+previewIcon:SetAllPoints(iconBtn)
 previewIcon:SetTexture(ICON)
+iconBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+iconBtn:SetScript("OnEnter", function(self)
+  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+  GameTooltip:AddLine("Click to choose an icon", 1, 1, 1)
+  GameTooltip:AddLine("Without one, the icon follows the spell in your macro.", 0.8, 0.8, 0.8, true)
+  GameTooltip:Show()
+end)
+iconBtn:SetScript("OnLeave", GameTooltip_Hide)
 
 local nameLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 nameLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 52, -2)
@@ -548,9 +678,13 @@ local function UpdateCounter()
   local n = #text
   counter:SetText(n .. "/255 Characters Used")
   if n >= 255 then counter:SetTextColor(1, 0.3, 0.3) else counter:SetTextColor(1, 1, 1) end
-  previewIcon:SetTexture(ns.MacroIcon({ body = text }))
+  previewIcon:SetTexture(chosenIcon or ns.MacroIcon({ body = text }))
 end
 bodyBox:SetScript("OnTextChanged", UpdateCounter)
+
+iconBtn:SetScript("OnClick", function()
+  ns.OpenIconPicker(function(tex) chosenIcon = tex; UpdateCounter() end)
+end)
 
 local editorNote = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 editorNote:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -274)
@@ -560,6 +694,7 @@ editorNote:SetJustifyH("LEFT")
 local deleteBtn
 local function EditorClear()
   editingIndex = nil
+  chosenIcon = nil
   nameBox:SetText(""); bodyBox:SetText("")
   UpdateCounter()
   if deleteBtn then deleteBtn:Disable() end
@@ -572,6 +707,7 @@ function ns.EditSaved(index)
   selectedSpec = "New macro"
   nameBox:SetText(s.name); bodyBox:SetText(s.body)
   editingIndex = index
+  chosenIcon = (s.icon and s.icon ~= ICON) and s.icon or nil
   UpdateCounter()
   if deleteBtn then deleteBtn:Enable() end
   editorNote:SetText("Editing \"" .. s.name .. "\". Save replaces it in your saved macros (characters that already added it keep their copy).")
@@ -580,10 +716,10 @@ function ns.EditSaved(index)
 end
 
 local function EditorSave(addHere)
-  local ok, res = ns.SaveCustom(nameBox:GetText(), bodyBox:GetText(), ns.playerClass, editingIndex)
+  local ok, res = ns.SaveCustom(nameBox:GetText(), bodyBox:GetText(), ns.playerClass, editingIndex, chosenIcon)
   if not ok then Print(res); return end
   Print("Saved \"" .. res .. "\". It's now in My Macros > Saved on every character.")
-  if addHere then AddMacro({ name = res, body = bodyBox:GetText():gsub("\r", "") }, nil, false) end
+  if addHere then AddMacro({ name = res, icon = chosenIcon, body = (bodyBox:GetText():gsub("\r", "")) }, nil, false) end
   EditorClear()
   Refresh()
 end

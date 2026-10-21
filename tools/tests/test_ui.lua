@@ -77,6 +77,44 @@ T.macros = {}; ns.playerClass = "MAGE"
 T.press("Saved"); T.click("My Taunt")
 T.check(GetMacroIndexByName("My Taunt") > 120, "typed macro added on another character")
 
+-- Icon picker, and default icons for created macros
+T.eq(ns.MacroIcon({ body = "#showtooltip\n/startattack\n/cast Charge" }), 5100, "bare #showtooltip falls through to the /cast spell")
+local sj = T.icon("SAVED"); sj._scripts.OnClick(sj)
+T.press("New macro")
+local editorFrame = nameBox._parent
+local iconBtn
+for _, f in ipairs(T.frames) do
+  if f._kind == "Button" and f._parent == editorFrame and f._scripts.OnEnter and f._scripts.OnClick and f._text == "" then iconBtn = f end
+end
+T.check(iconBtn, "editor has an icon button")
+local picker = ReadyMacrosIconPicker
+T.check(not picker._shown, "icon picker starts hidden")
+iconBtn._scripts.OnClick(iconBtn)
+T.check(picker._shown, "clicking the icon opens the picker")
+local cells = {}
+for _, f in ipairs(T.frames) do if f._kind == "Button" and f._parent == picker then cells[#cells + 1] = f end end
+T.eq(#cells, 72, "picker grid has 72 cells")
+T.eq(cells[1].iconValue, "Interface\\Icons\\LOOSE_1", "first cell is the first game icon (name becomes a path)")
+picker._scripts.OnMouseWheel(picker, -1)
+T.eq(cells[1].iconValue, "Interface\\Icons\\LOOSE_25", "scrolling moves the grid by 3 rows")
+picker._scripts.OnMouseWheel(picker, 1000)
+T.eq(cells[1].iconValue, "Interface\\Icons\\LOOSE_1", "scrolling back stops at the top")
+for i = 1, 100 do picker._scripts.OnMouseWheel(picker, -1) end
+T.eq(cells[#cells].iconValue, 1100, "scrolling reaches the last icon (numeric file IDs stay numbers)")
+cells[1]._scripts.OnClick(cells[1])
+T.check(not picker._shown, "picking an icon closes the picker")
+nameBox:SetText("Pretty"); bodyBox:SetText("/say pretty")
+iconBtn._scripts.OnClick(iconBtn); cells[2]._scripts.OnClick(cells[2])
+T.press("Save and add here")
+local savedPretty
+for _, sv in ipairs(ns.GetSaved()) do if sv.name == "Pretty" then savedPretty = sv end end
+T.check(savedPretty and savedPretty.icon ~= nil, "chosen icon is saved with the macro")
+T.eq(select(2, GetMacroInfo(GetMacroIndexByName("Pretty"))), savedPretty.icon, "macro created on the character uses the chosen icon")
+local wi2 = T.icon("WARRIOR"); wi2._scripts.OnClick(wi2); T.press("All specs")
+T.macros = {}
+T.click("MO Charge")
+T.eq(select(2, GetMacroInfo(GetMacroIndexByName("MO Charge"))), 5100, "ready-made macro is created with its spell's icon")
+
 -- Macro icons and editor delete/cancel
 T.eq(ns.MacroIcon({ body = "#showtooltip Charge\n/cast Charge" }), 5100, "icon from #showtooltip spell")
 T.eq(ns.MacroIcon({ body = "/cast [@mouseover,help][] Heroic Strike" }), 5078, "icon from first /cast spell")

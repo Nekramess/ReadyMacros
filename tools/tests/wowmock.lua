@@ -76,6 +76,8 @@ function M.install(opts)
   end
   InCombatLockdown = function() return false end
   IsShiftKeyDown = function() return M.shift end
+  GetLooseMacroIcons = function(t) for i = 1, 100 do t[#t + 1] = "LOOSE_" .. i end end
+  GetMacroIcons = function(t) for i = 1, 100 do t[#t + 1] = 1000 + i end end
   PickupMacro = function(i) M.picked = i end
   ShowMacroFrame = function() M.macroFrameOpened = true end
   IsAltKeyDown = function() return M.alt end

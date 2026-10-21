@@ -43,7 +43,7 @@ end
 
 -- Saves a macro the player typed. editIndex = replace that saved entry instead of adding.
 -- Returns true, name or false, reason. Unlike SaveMacro it never renames: the player chose the name.
-function ns.SaveCustom(name, body, classKey, editIndex)
+function ns.SaveCustom(name, body, classKey, editIndex, icon)
   name = (name or ""):match("^%s*(.-)%s*$")
   body = (body or ""):gsub("\r", "")
   if name == "" then return false, "Give the macro a name." end
@@ -58,10 +58,10 @@ function ns.SaveCustom(name, body, classKey, editIndex)
   end
   if editIndex and saved[editIndex] then
     local s = saved[editIndex]
-    s.name, s.body = name, body
+    s.name, s.body, s.icon = name, body, icon
     return true, name
   end
-  saved[#saved + 1] = { name = name, body = body, icon = nil, class = classKey }
+  saved[#saved + 1] = { name = name, body = body, icon = icon, class = classKey }
   return true, name
 end
 
