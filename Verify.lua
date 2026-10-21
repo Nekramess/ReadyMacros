@@ -41,6 +41,24 @@ local function RecordSeen(name, info)
   end
 end
 
+-- Remember the icon of every macro spell this character knows, account-wide (ReadyMacrosDB.spellIcons),
+-- so a spell learned on one character shows its icon on rows for characters that haven't learned it yet.
+-- Icons only ever come from the client; nothing here is guessed.
+function ns.CacheSpellIcons()
+  if not ReadyMacrosDB or not ns.CLASSES then return end
+  ReadyMacrosDB.spellIcons = ReadyMacrosDB.spellIcons or {}
+  for _, class in pairs(ns.CLASSES) do
+    for _, list in pairs(class.macros) do
+      for _, m in ipairs(list) do
+        for _, name in ipairs(ns.SpellsInBody(m.body)) do
+          local info = LookUp(name)
+          if info and info.iconID then ReadyMacrosDB.spellIcons[name] = info.iconID end
+        end
+      end
+    end
+  end
+end
+
 -- Forever documents C_SpellBook.IsSpellKnown(spellID, spellBank); the global IsPlayerSpell is only a deprecated
 -- shim there (Blizzard_DeprecatedSpellBook, gated by the loadDeprecationFallbacks CVar), so try the namespace first.
 local function KnownByID(id)

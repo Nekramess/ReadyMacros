@@ -115,6 +115,17 @@ T.macros = {}
 T.click("MO Charge")
 T.eq(select(2, GetMacroInfo(GetMacroIndexByName("MO Charge"))), 5100, "ready-made macro is created with its spell's icon")
 
+-- Spell icon cache: a spell learned on one character shows its icon for one that hasn't learned it
+T.macros = {}
+local cacheDB = ReadyMacrosDB
+ns.CacheSpellIcons()
+T.eq(cacheDB.spellIcons and cacheDB.spellIcons["Charge"], 5100, "known spell icon is cached account-wide")
+local savedKnown = T.known; T.known = {}
+T.eq(ns.MacroIcon({ body = "/cast Heroic Strike" }), 5078, "cached icon used when the spell isn't known on this character")
+T.known = savedKnown
+cacheDB.spellIcons = {}
+T.eq(ns.MacroIcon({ body = "/cast Whirlwind" }), 134400, "never-seen spell without an ID stays on the default icon")
+
 -- Macro icons and editor delete/cancel
 T.eq(ns.MacroIcon({ body = "#showtooltip Charge\n/cast Charge" }), 5100, "icon from #showtooltip spell")
 T.eq(ns.MacroIcon({ body = "/cast [@mouseover,help][] Heroic Strike" }), 5078, "icon from first /cast spell")

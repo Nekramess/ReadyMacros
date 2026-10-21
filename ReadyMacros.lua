@@ -260,6 +260,8 @@ function ns.MacroIcon(m)
     end
     local ok, info = pcall(C_Spell.GetSpellInfo, spell)
     if ok and type(info) == "table" and info.iconID then return info.iconID end
+    local cached = ReadyMacrosDB and ReadyMacrosDB.spellIcons and ReadyMacrosDB.spellIcons[spell]
+    if cached then return cached end
   end
   return ICON
 end
@@ -889,10 +891,12 @@ events:SetScript("OnEvent", function(_, event)
     ns.playerClass = classFile
     local key = ns.CLASSES[classFile] and classFile or "GENERAL"
     local data = ns.CLASSES[key]
+    ns.CacheSpellIcons()
     local idx = DetectSpecIndex(#data.specs)
     SelectClass(key, idx and data.specs[idx] or nil)
-  elseif frame:IsShown() then
-    Refresh()
+  else
+    if event == "SPELLS_CHANGED" then ns.CacheSpellIcons() end
+    if frame:IsShown() then Refresh() end
   end
 end)
 
