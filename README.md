@@ -13,8 +13,8 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 
 ## Macro lists
 - A row of class icons for all 9 classes, plus a General icon for macros that work on any class, such as Hearthstone, raid target markers and reload.
-- Each class is one list. Its macros are grouped by spec under a header for each spec, with an "All specs" section last. Scroll with the mouse wheel or use Prev and Next.
-- The window opens on your own class. It tries to open on the page for your current spec.
+- Each class is one scrolling window of icons, like the game's own macro window: a header for each spec, with the macro icons and names under it, and an "All specs" section last. Scroll with the mouse wheel or the scroll bar. Hover an icon for the macro text and spell check; a green border means you know the spell, a faded icon with a number means you learn it at that level, orange means check it, and a tick means it is already on this character.
+- The window opens on your own class. It tries to open scrolled to your current spec.
 - Hover over a macro to see its full text before you add it.
 - Heals, dispels, damage-over-time spells and crowd control spells use mouseover: they cast on the unit under your mouse, or on your target if you are not hovering anything.
 - Warrior macros switch to the right stance when needed, for example Charge in Battle Stance and Intercept in Berserker Stance on one button.
@@ -51,7 +51,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 ## Known limits
 - Spell names are based on beta information and may change. 0 macros use a spell name that has not been confirmed yet (checked against Wowhead's Forever spell lists on 21 Oct 2026; Mangle is the one name those lists don't show, and it is still marked as confirmed from earlier sources). Any macro with an unconfirmed name would be marked in the list.
 - Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells and three Paladin spells (Purify, Blessing of Protection, Blessing of Freedom).
-- Spec detection is a best guess and may open the wrong spec page.
+- Spec detection is a best guess and may scroll to the wrong spec.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
 - The spell ID report (`/rmac ids`), My Macros (including the New macro editor), the Game macro window button, dragging rows to action bars, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
 - The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. Confirmed in the live client on 20 Oct 2026: with Leatrix Plus' "Enhance minimap" on, the old button was replaced and labelled a custom button, the new one is not (author's test).

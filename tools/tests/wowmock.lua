@@ -18,6 +18,8 @@ local function newObj(kind)
       IsShown = function(self) return self._shown end,
       SetText = function(self, v) self._text = v end,
       GetText = function(self) return self._text end,
+      SetVerticalScroll = function(self, v) self._vscroll = v end,
+      SetMinMaxValues = function(self, a, b) self._min, self._max = a, b end,
       SetFocus = function(self) M.focused = self end,
       Enable = function(self) self._enabled = true end,
       Disable = function(self) self._enabled = false end,

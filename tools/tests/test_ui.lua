@@ -11,81 +11,94 @@ T.eq(SLASH_READYMACROS1, "/readymacros", "slash command 1")
 T.eq(SLASH_READYMACROS2, "/rmac", "slash command 2")
 SlashCmdList.READYMACROS("")
 
--- One view per class: every spec's macros under a header, no spec tabs
+-- One scrolling list per class: a grid of icon cells under a header for each spec, no spec tabs, no pages
 local W = ns.CLASSES.WARRIOR
 local function visible(kind) local n = {} for _, f in ipairs(T.rows()) do if f.entry.kind == kind then n[#n + 1] = f end end return n end
-local function goToPage(n) while true do local b = T.button("Prev"); if b._enabled then b._scripts.OnClick(b) else break end end for _ = 2, n do T.press("Next") end end
-local function visit(fn) -- calls fn(pageNumber) on every page, then returns to page 1
-  goToPage(1)
-  local n = 1
-  while true do
-    fn(n)
-    local b = T.button("Next")
-    if not b._enabled then break end
-    b._scripts.OnClick(b); n = n + 1
-  end
-  goToPage(1)
-  return n
-end
+local function cellPos(f) return f.lastPoint[4], -f.lastPoint[5] end   -- x, y (downwards) inside the list
 for _, f in ipairs(T.frames) do
+  if f._kind == "Button" and f._text and (f._text == "Prev" or f._text == "Next") then T.check(false, "no pager button exists: " .. f._text) end
   if f._kind == "Button" and f._text and (f._text == "Assassination" or f._text == "Arms" or f._text == "Fury" or f._text == "Protection" or f._text == "All specs") and f._shown then
     T.check(false, "no spec tab is visible on a class: " .. f._text)
   end
 end
-local total, wantHeaders = 0, 0
-for _, spec in ipairs(W.specs) do if #(W.macros[spec] or {}) > 0 then wantHeaders = wantHeaders + 1 end end
-if #(W.macros[ns.UTILITY] or {}) > 0 then wantHeaders = wantHeaders + 1 end
-local seen, sawMacros, headerLast, firstMacroLine = {}, 0, false, nil
-local pageCount = visit(function(n)
-  local rs = T.rows()
-  T.check(#rs <= 9, "page " .. n .. " has at most 9 rows")
-  T.check(rs[1].entry.kind == "header", "page " .. n .. " opens with a header row")
-  if rs[#rs].entry.kind == "header" then headerLast = true end
-  for _, f in ipairs(rs) do
-    if f.entry.kind == "header" then if not f.entry.label:find("continued", 1, true) then seen[f.entry.label] = true end
-    else sawMacros = sawMacros + 1 end
-  end
-end)
-local wantMacros = 0
-for _, spec in ipairs(W.specs) do wantMacros = wantMacros + #(W.macros[spec] or {}) end
-wantMacros = wantMacros + #(W.macros[ns.UTILITY] or {})
-T.eq(sawMacros, wantMacros, "every Warrior macro appears exactly once across the pages")
-local nSeen = 0; for _ in pairs(seen) do nSeen = nSeen + 1 end
-T.eq(nSeen, wantHeaders, "one header per spec section")
-T.check(seen["All specs"], "Utility macros sit under an \"All specs\" header")
-T.check(not headerLast, "a header never ends a page")
-T.check(pageCount > 1, "Warrior needs more than one page")
--- the page for the detected spec opens first (spec detection returns nothing in the mock, so first page)
+local wantMacros, wantHeaders = 0, 0
+for _, spec in ipairs(W.specs) do if #(W.macros[spec] or {}) > 0 then wantHeaders = wantHeaders + 1; wantMacros = wantMacros + #W.macros[spec] end end
+if #(W.macros[ns.UTILITY] or {}) > 0 then wantHeaders = wantHeaders + 1; wantMacros = wantMacros + #W.macros[ns.UTILITY] end
+local macroCells, headers = visible("macro"), visible("header")
+T.eq(#macroCells, wantMacros, "every Warrior macro is shown at once (no paging)")
+T.eq(#headers, wantHeaders, "one header per spec section")
+local hasAll = false
+for _, h in ipairs(headers) do if h.entry.label == "All specs" then hasAll = true end end
+T.check(hasAll, "Utility macros sit under an \"All specs\" header")
+-- grid geometry: 7 per line, left to right, then down; headers sit between sections
+table.sort(headers, function(a, b) local _, ya = cellPos(a); local _, yb = cellPos(b); return ya < yb end)
+local firstHeaderY = select(2, cellPos(headers[1]))
+T.eq(firstHeaderY, 0, "first header is at the top")
+local underFirst = {}
+for _, c in ipairs(macroCells) do
+  local _, cy = cellPos(c)
+  local nextY = headers[2] and select(2, cellPos(headers[2])) or math.huge
+  if cy > firstHeaderY and cy < nextY then underFirst[#underFirst + 1] = c end
+end
+table.sort(underFirst, function(a, b) local xa, ya = cellPos(a); local xb, yb = cellPos(b); if ya ~= yb then return ya < yb end return xa < xb end)
+T.check(#underFirst >= 2, "first section has at least two macros")
+local x1, y1 = cellPos(underFirst[1]); local x2, y2 = cellPos(underFirst[2])
+T.eq(y1, y2, "neighbouring macros share a line")
+T.check(x2 > x1, "macros run left to right")
+if #underFirst > 7 then local _, y8 = cellPos(underFirst[8]); T.check(y8 > y1, "the 8th macro wraps to the next line") end
+for i = 2, #headers do
+  local _, hy = cellPos(headers[i])
+  local lastCellY = -1
+  for _, c in ipairs(macroCells) do local _, cy = cellPos(c); if cy < hy and cy > lastCellY then lastCellY = cy end end
+  T.check(hy >= lastCellY + 76, "header " .. i .. " starts below the previous section's last line")
+end
+-- scrolling: the list is taller than the view, wheel moves it, and it stops at both ends
+local scrollFrame
+for _, f in ipairs(T.frames) do if f._kind == "ScrollFrame" then scrollFrame = f end end
+local bar
+for _, f in ipairs(T.frames) do if f._kind == "Slider" and f._parent == ReadyMacrosFrame then bar = f end end
+T.check(scrollFrame and bar and bar._max and bar._max > 0, "the Warrior list is taller than the window, so it scrolls")
+scrollFrame._scripts.OnMouseWheel(scrollFrame, 1)
+T.eq(scrollFrame._vscroll, 0, "scrolling up at the top stays at the top")
+scrollFrame._scripts.OnMouseWheel(scrollFrame, -1)
+T.eq(scrollFrame._vscroll, 50, "one wheel notch scrolls 50 pixels")
+for _ = 1, 200 do scrollFrame._scripts.OnMouseWheel(scrollFrame, -1) end
+T.eq(scrollFrame._vscroll, bar._max, "scrolling stops at the end of the list")
+for _ = 1, 200 do scrollFrame._scripts.OnMouseWheel(scrollFrame, 1) end
+T.eq(scrollFrame._vscroll, 0, "and back at the top")
 
--- Spec detection opens the class on the page that holds your spec
+-- The "All specs" section holds more than 7 macros, so it wraps onto a second line
+local allHdr; for _, h in ipairs(headers) do if h.entry.label == "All specs" then allHdr = h end end
+local allY = select(2, cellPos(allHdr))
+local allCells = {}
+for _, c in ipairs(macroCells) do local _, cy = cellPos(c); if cy > allY then allCells[#allCells + 1] = c end end
+table.sort(allCells, function(a, b) local xa, ya = cellPos(a); local xb, yb = cellPos(b); if ya ~= yb then return ya < yb end return xa < xb end)
+T.check(#allCells > 7, "the All specs section has more than one line of macros")
+local _, ay1 = cellPos(allCells[1]); local _, ay7 = cellPos(allCells[7]); local ax8, ay8 = cellPos(allCells[8])
+T.eq(ay1, ay7, "first seven macros of a section share a line")
+T.check(ay8 > ay1, "the 8th macro wraps to the next line")
+T.eq(ax8, 3, "a wrapped macro starts at the left edge")
+-- a class without specs (General) is one headerless grid
+local gi = T.icon("GENERAL"); gi._scripts.OnClick(gi)
+T.eq(#visible("header"), 0, "General has no spec headers")
+T.eq(#visible("macro"), #ns.CLASSES.GENERAL.macros[ns.UTILITY], "General shows all its macros")
+local wiBack = T.icon("WARRIOR"); wiBack._scripts.OnClick(wiBack)
+
+-- Spec detection opens the class scrolled to the header of your spec
 local lastSpecName = W.specs[#W.specs]
 T.spec = #W.specs
 T.fire("PLAYER_LOGIN")
-local onPage = false
-for _, f in ipairs(T.rows()) do if f.entry.kind == "header" and f.entry.spec == lastSpecName then onPage = true end end
-T.check(onPage, "login opens the page with your detected spec (" .. lastSpecName .. ")")
+local hdrY
+for _, f in ipairs(T.rows()) do if f.entry.kind == "header" and f.entry.spec == lastSpecName then hdrY = select(2, cellPos(f)) end end
+T.check(hdrY ~= nil, "the detected spec has a header (" .. lastSpecName .. ")")
+T.eq(scrollFrame._vscroll, math.min(hdrY, bar._max), "login scrolls to the detected spec's section")
 T.spec = nil
 local wiX = T.icon("WARRIOR"); wiX._scripts.OnClick(wiX)
-T.check(T.rows()[1].entry.label ~= nil and T.rows()[1].entry.kind == "header", "choosing the class icon shows its first page")
--- a long section continues onto the next page with a (continued) header
-local cont = false
-visit(function() for _, f in ipairs(T.rows()) do if f.entry.kind == "header" and f.entry.label:find("continued", 1, true) then cont = true end end end)
-T.check(cont, "a section that spans pages repeats its header as (continued)")
+T.eq(scrollFrame._vscroll, 0, "choosing the class icon starts at the top")
 
 -- Adding a macro creates it in the character tab, once
-local function findAndClick(name)
-  local found
-  visit(function() for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and f.entry.macro.name == name and not found then found = true; f._scripts.OnClick(f) end end end)
-  T.check(found, name .. " found in the list")
-end
 local function goTo(name)
-  local n = 1
-  goToPage(1)
-  while true do
-    for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and f.entry.macro.name == name then return f end end
-    local b = T.button("Next"); if not b._enabled then return nil end
-    b._scripts.OnClick(b)
-  end
+  for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and f.entry.macro.name == name then return f end end
 end
 local mo = goTo("MO Charge"); T.check(mo, "MO Charge is listed"); mo._scripts.OnClick(mo)
 T.check(GetMacroIndexByName("MO Charge") > 120, "MO Charge created as a character macro")
