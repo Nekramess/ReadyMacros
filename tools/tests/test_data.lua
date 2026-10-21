@@ -92,6 +92,23 @@ for name, e in pairs(ns.SPELL_IDS) do
   idSeen[e.id] = true
 end
 
+-- Icon lookup IDs: numeric, unique per name, and every name is used by some macro
+local iconSeen, iconCount = {}, 0
+for name, id in pairs(ns.SPELL_ICON_IDS) do
+  T.check(type(id) == "number" and id > 0, name .. ": icon ID is a number")
+  T.check(used[name], name .. ": icon ID entry is used by some macro")
+  iconSeen[id] = (iconSeen[id] or 0) + 1
+  iconCount = iconCount + 1
+end
+for id, n in pairs(iconSeen) do T.check(n == 1, "icon ID " .. id .. " is not shared by two spell names") end
+for name, e in pairs(ns.SPELL_IDS) do
+  T.eq(ns.SPELL_ICON_IDS[name], e.id, name .. ": icon ID agrees with the verified SPELL_IDS entry")
+end
+-- every spell a macro casts has an icon ID, except Mangle (not in the Forever lists)
+for name in pairs(used) do
+  if name ~= "Mangle" then T.check(ns.SPELL_ICON_IDS[name], name .. ": has an icon ID") end
+end
+
 -- README's count of unconfirmed spell names must match the data.
 local readme = io.open("README.md"):read("*a")
 local claimed = tonumber(readme:match("(%d+) macros use a spell name that has not been confirmed"))

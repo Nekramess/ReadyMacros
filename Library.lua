@@ -41,6 +41,30 @@ function ns.SaveMacro(name, body, icon, classKey)
   return finalName == name and "saved" or "renamed", finalName
 end
 
+-- Saves a macro the player typed. editIndex = replace that saved entry instead of adding.
+-- Returns true, name or false, reason. Unlike SaveMacro it never renames: the player chose the name.
+function ns.SaveCustom(name, body, classKey, editIndex, icon)
+  name = (name or ""):match("^%s*(.-)%s*$")
+  body = (body or ""):gsub("\r", "")
+  if name == "" then return false, "Give the macro a name." end
+  if #name > 16 then return false, "Macro names can be at most 16 characters." end
+  if body:match("^%s*$") then return false, "The macro text is empty." end
+  if #body > 255 then return false, "Macro text can be at most 255 characters (it is " .. #body .. ")." end
+  local saved = ns.GetSaved()
+  for i, s in ipairs(saved) do
+    if s.name == name and i ~= editIndex then
+      return false, "You already have a saved macro named \"" .. name .. "\"."
+    end
+  end
+  if editIndex and saved[editIndex] then
+    local s = saved[editIndex]
+    s.name, s.body, s.icon = name, body, icon
+    return true, name
+  end
+  saved[#saved + 1] = { name = name, body = body, icon = icon, class = classKey }
+  return true, name
+end
+
 function ns.RemoveSaved(index)
   table.remove(ns.GetSaved(), index)
 end

@@ -13,8 +13,8 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 
 ## Macro lists
 - A row of class icons for all 9 classes, plus a General icon for macros that work on any class, such as Hearthstone, raid target markers and reload.
-- Each class has one tab for each of its three specs, plus an "All specs" tab.
-- The window opens on your own class. It tries to open on your current spec, and otherwise remembers the last spec you viewed.
+- Each class is one scrolling window of icons, like the game's own macro window: a header for each spec, with the macro icons and names under it, and an "All specs" section last. Scroll with the mouse wheel or the scroll bar. Hover an icon for the macro text and spell check; a green border means you know the spell, a faded icon with a number means you learn it at that level, orange means check it, and a tick means it is already on this character.
+- The window opens on your own class. It tries to open scrolled to your current spec.
 - Hover over a macro to see its full text before you add it.
 - Heals, dispels, damage-over-time spells and crowd control spells use mouseover: they cast on the unit under your mouse, or on your target if you are not hovering anything.
 - Warrior macros switch to the right stance when needed, for example Charge in Battle Stance and Intercept in Berserker Stance on one button.
@@ -32,19 +32,26 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - `/rmac ids` shows a copyable report of every spell in your class's macros and its status. Spell IDs your client knows are recorded automatically.
 
 ## My Macros
+- **New macro:** type a name (up to 16 characters) and the macro text (up to 255), then click Save to list, or Save and add here to also create it on the current character. Saved macros appear under Saved on every character. Alt-click a saved macro to edit it.
 - **Import:** lists every macro on your current character. Click one to save it.
-- **Saved:** your saved macros, available on every character on your account. Click to add one to the current character. Shift-click to remove it from the list.
+- **Saved:** your saved macros, available on every character on your account. Click to add one to the current character. Alt-click to edit. Shift-click to remove it from the list.
 - **Weapon swap:** equip a weapon set and click Capture. Do this for two sets, for example one-hand and shield, then two-hand. Ready Macros reads the item names from your equipped gear and creates a macro for each set. Recapture and click again to update a macro after you change weapons.
+
+## Macro window and action bars
+- Click the icon next to the name in the New macro editor to pick any icon the game offers (scrollable grid). Macros you add from the ready-made lists are created with the icon of the spell they use (when the game can tell which spell that is). Spells a character hasn't learned yet get their icon from a built-in table of Forever spell IDs (Mangle is the one spell without an entry and shows a question mark); icons of spells you know are also remembered across your characters.
+- The class lists and the New macro editor are laid out like the game's macro window.
+- **Game macro window** button (bottom right) opens the game's own macro window.
+- **Drag any macro row onto an action bar.** If your character doesn't have the macro yet, Ready Macros adds it first, then picks it up so you can drop it on a slot.
 
 ## How to use
 - Type `/rmac` or `/readymacros` to open or close the window.
-- Pick a class and a spec tab, then click a macro to add it.
+- Pick a class, then click a macro to add it.
 - Open the game's macro window with `/macro` and drag the new macro to your action bar.
 
 ## Known limits
-- Spell names are based on beta information and may change. 14 macros use a spell name that has not been confirmed yet, and they are marked in the list.
+- Spell names are based on beta information and may change. 0 macros use a spell name that has not been confirmed yet (checked against Wowhead's Forever spell lists on 21 Oct 2026; Mangle is the one name those lists don't show, and it is still marked as confirmed from earlier sources). Any macro with an unconfirmed name would be marked in the list.
 - Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells and three Paladin spells (Purify, Blessing of Protection, Blessing of Freedom).
-- Spec detection is a best guess and may open the wrong spec tab.
+- Spec detection is a best guess and may scroll to the wrong spec.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
-- The spell ID report (`/rmac ids`), My Macros, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
+- Seen working in the live client (author's tests, 20 and 21 Oct 2026): the New macro editor and icon picker, dragging a macro onto an action bar, the class icon grid with scrolling, and spell icons for spells the character hasn't learned. Not yet confirmed there: Alt-click editing and Delete in the editor, Import, weapon swap, the spell ID report (`/rmac ids`) and the Game macro window button (tested only against a simulated game API).
 - The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. Confirmed in the live client on 20 Oct 2026: with Leatrix Plus' "Enhance minimap" on, the old button was replaced and labelled a custom button, the new one is not (author's test).

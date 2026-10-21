@@ -6,17 +6,15 @@ local ICON = 134400 -- question-mark icon; with #showtooltip the game shows the 
 local GENERAL_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local SAVED_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 local PREFIX = "|cff33ccffReady Macros:|r "
-local MAX_ROWS = 8
 
 local SAVED = "SAVED" -- the "My Macros" view
-local SAVED_TABS = { "Saved", "Import", "Weapon swap" }
+local SAVED_TABS = { "Saved", "New macro", "Import", "Weapon swap" }
 
 local VIEW_ORDER = {}
 for _, key in ipairs(ns.CLASS_ORDER) do VIEW_ORDER[#VIEW_ORDER + 1] = key end
 VIEW_ORDER[#VIEW_ORDER + 1] = SAVED
 
-local selectedClass, selectedSpec
-local page = 1
+local selectedClass, selectedSpec, focusSpec
 
 local function Print(msg) print(PREFIX .. msg) end
 
@@ -89,7 +87,7 @@ local function AddMacro(m, checkClass, allowUpdate)
     Print("Your character-specific macro slots are full.")
     return
   end
-  local id = CreateMacro(m.name, m.icon or ICON, m.body, true) -- true = character-specific tab
+  local id = CreateMacro(m.name, ns.MacroIcon(m), m.body, true) -- true = character-specific tab
   if not id then
     Print("Couldn't create \"" .. m.name .. "\".")
     return
@@ -180,22 +178,68 @@ for i = 1, 4 do
   specTabs[i] = t
 end
 
--- Pager
-local pager = CreateFrame("Frame", nil, frame)
-pager:SetSize(220, 22)
-pager:SetPoint("BOTTOM", frame, "BOTTOM", 0, 34)
-local prevBtn = CreateFrame("Button", nil, pager, "UIPanelButtonTemplate")
-prevBtn:SetSize(60, 22)
-prevBtn:SetPoint("LEFT")
-prevBtn:SetText("Prev")
-local nextBtn = CreateFrame("Button", nil, pager, "UIPanelButtonTemplate")
-nextBtn:SetSize(60, 22)
-nextBtn:SetPoint("RIGHT")
-nextBtn:SetText("Next")
-local pageText = pager:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-pageText:SetPoint("CENTER")
-prevBtn:SetScript("OnClick", function() page = page - 1; Refresh() end)
-nextBtn:SetScript("OnClick", function() page = page + 1; Refresh() end)
+-- Opens the game's own macro window (ShowMacroFrame, Blizzard_MacroUI_Bootstrap.lua in the Forever UI source).
+local macroWinBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+macroWinBtn:SetSize(150, 22)
+macroWinBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 34)
+macroWinBtn:SetText("Game macro window")
+macroWinBtn:SetScript("OnClick", function()
+  if type(ShowMacroFrame) == "function" then
+    local ok = pcall(ShowMacroFrame)
+    if not ok then Print("Couldn't open the game's macro window. Try /macro.") end
+  else
+    Print("Couldn't open the game's macro window. Try /macro.")
+  end
+end)
+
+---------------------------------------------------------------------------
+-- Scrolling list (no pages): macro cells and rows live in `child`, clipped by `scroll`
+---------------------------------------------------------------------------
+local VIEW_W = 510
+local scroll = CreateFrame("ScrollFrame", nil, frame)
+local child = CreateFrame("Frame", nil, scroll)
+child:SetSize(VIEW_W, 10)
+scroll:SetScrollChild(child)
+
+local scrollBar = CreateFrame("Slider", nil, frame)
+scrollBar:SetOrientation("VERTICAL")
+scrollBar:SetWidth(12)
+local scrollBg = scrollBar:CreateTexture(nil, "BACKGROUND")
+scrollBg:SetAllPoints(scrollBar)
+scrollBg:SetColorTexture(0, 0, 0, 0.45)
+local scrollThumb = scrollBar:CreateTexture(nil, "OVERLAY")
+scrollThumb:SetColorTexture(1, 0.82, 0, 0.75)
+scrollThumb:SetSize(12, 36)
+scrollBar:SetThumbTexture(scrollThumb)
+scrollBar:SetMinMaxValues(0, 0)
+
+local scrollOffset, scrollMax, resetScroll = 0, 0, true
+local function SetScroll(v)
+  v = math.min(math.max(v or 0, 0), scrollMax)
+  scrollOffset = v
+  scroll:SetVerticalScroll(v)
+  scrollBar.updating = true
+  scrollBar:SetValue(v)
+  scrollBar.updating = false
+end
+scrollBar:SetScript("OnValueChanged", function(self, v)
+  if self.updating then return end
+  SetScroll(v)
+end)
+local function OnWheel(_, delta) SetScroll(scrollOffset - delta * 50) end
+frame:EnableMouseWheel(true)
+frame:SetScript("OnMouseWheel", OnWheel)
+scroll:EnableMouseWheel(true)
+scroll:SetScript("OnMouseWheel", OnWheel)
+
+local function PlaceScroll(top)
+  scroll:ClearAllPoints()
+  scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -top)
+  scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 62)
+  scrollBar:ClearAllPoints()
+  scrollBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -top)
+  scrollBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 62)
+end
 
 ---------------------------------------------------------------------------
 -- Tooltip for a macro row
@@ -226,46 +270,84 @@ local function AddCheckLines(m, checkClass)
 end
 
 ---------------------------------------------------------------------------
+-- Macro icon: the saved icon, else the icon of the spell named in #showtooltip or the first /cast
+---------------------------------------------------------------------------
+function ns.MacroIcon(m)
+  if m.icon and m.icon ~= ICON then return m.icon end
+  local body = m.body or ""
+  local spell = body:match("#showtooltip[ \t]+([^\n]+)")
+  if not spell then
+    local line = body:match("/cast%s+([^\n]+)") or body:match("/use%s+([^\n]+)")
+    if line then spell = line:gsub("%b[]", ""):match("^%s*([^;]-)%s*$") end
+  end
+  if spell then
+    spell = spell:match("^%s*(.-)%s*$")
+    -- Spell IDs we have on file work even when the spell isn't learned yet.
+    local entry = ns.SPELL_IDS and ns.SPELL_IDS[spell]
+    if entry and C_Spell and C_Spell.GetSpellTexture then
+      local ok, tex = pcall(C_Spell.GetSpellTexture, entry.id)
+      if ok and tex then return tex end
+    end
+    local ok, info = pcall(C_Spell.GetSpellInfo, spell)
+    if ok and type(info) == "table" and info.iconID then return info.iconID end
+    -- Icon-only IDs (SPELL_ICON_IDS) cover spells the character hasn't learned yet.
+    local iconID = ns.SPELL_ICON_IDS and ns.SPELL_ICON_IDS[spell]
+    if iconID and C_Spell and C_Spell.GetSpellTexture then
+      local ok2, tex = pcall(C_Spell.GetSpellTexture, iconID)
+      if ok2 and tex then return tex end
+    end
+    local cached = ReadyMacrosDB and ReadyMacrosDB.spellIcons and ReadyMacrosDB.spellIcons[spell]
+    if cached then return cached end
+  end
+  return ICON
+end
+
+---------------------------------------------------------------------------
 -- Rows
 ---------------------------------------------------------------------------
-local rows = {}
-local ROW_HEIGHT = 36
+local rows, cells = {}, {}
+local ROW_HEIGHT, HEADER_HEIGHT = 36, 26
+local GRID_COLS, CELL_W, CELL_H = 7, 72, 76
 
-local function GetRow(i)
-  if rows[i] then return rows[i] end
-  local r = CreateFrame("Button", nil, frame)
-  r:SetSize(526, ROW_HEIGHT)
-  r:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140 - (i - 1) * (ROW_HEIGHT + 2))
-  r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-
-  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  r.name:SetPoint("TOPLEFT", 6, -4)
-  r.desc = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  r.desc:SetPoint("TOPLEFT", r.name, "BOTTOMLEFT", 0, -2)
-  r.desc:SetPoint("RIGHT", r, "RIGHT", -170, 0)
-  r.desc:SetJustifyH("LEFT")
-  r.desc:SetWordWrap(false)
-  r.state = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  r.state:SetPoint("RIGHT", -8, 0)
-
+-- Click, drag and tooltip behaviour shared by list rows and grid cells.
+local function AttachScripts(r)
   r:SetScript("OnClick", function(self)
     local e = self.entry
     if not e then return end
     if e.kind == "macro" then
-      if IsShiftKeyDown() and e.onShift then e.onShift() else AddMacro(e.macro, e.checkClass, e.allowUpdate) end
+      if IsAltKeyDown and IsAltKeyDown() and e.onAlt then e.onAlt(); return
+      elseif IsShiftKeyDown() and e.onShift then e.onShift() else AddMacro(e.macro, e.checkClass, e.allowUpdate) end
     elseif e.onClick then
       e.onClick()
     end
     Refresh()
   end)
+  -- Drag a macro onto an action bar: adds the macro first if this character doesn't have it,
+  -- then picks it up (PickupMacro, as the game's macro window does).
+  r:RegisterForDrag("LeftButton")
+  r:SetScript("OnDragStart", function(self)
+    local e = self.entry
+    if not e or e.kind ~= "macro" then return end
+    if InCombatLockdown() then Print("Can't pick up macros in combat."); return end
+    local idx = GetMacroIndexByName(e.macro.name)
+    if idx == 0 then
+      AddMacro(e.macro, e.checkClass, false)
+      idx = GetMacroIndexByName(e.macro.name)
+      Refresh()
+    end
+    if idx ~= 0 and PickupMacro then PickupMacro(idx) end
+  end)
   r:SetScript("OnEnter", function(self)
     local e = self.entry
-    if not e then return end
+    if not e or e.kind == "header" then return end
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     if e.kind == "macro" then
       GameTooltip:AddLine(e.macro.name, 1, 1, 1)
+      if e.macro.desc and e.macro.desc ~= "" then GameTooltip:AddLine(e.macro.desc, 1, 0.82, 0, true) end
       GameTooltip:AddLine(e.macro.body, 0.8, 0.8, 0.8, true)
       AddCheckLines(e.macro, e.checkClass)
+      GameTooltip:AddLine(" ")
+      GameTooltip:AddLine("Click to add to this character. Drag onto an action bar to add it and place it in one step.", 0.6, 0.8, 1, true)
     else
       GameTooltip:AddLine(e.label, 1, 1, 1)
       if e.body then GameTooltip:AddLine(e.body, 0.8, 0.8, 0.8, true) end
@@ -277,50 +359,140 @@ local function GetRow(i)
     GameTooltip:Show()
   end)
   r:SetScript("OnLeave", GameTooltip_Hide)
+end
 
+-- A full-width list row (headers, My Macros lists).
+local function GetRow(i)
+  if rows[i] then return rows[i] end
+  local r = CreateFrame("Button", nil, child)
+  r:SetSize(VIEW_W, ROW_HEIGHT)
+  r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+
+  r.line = r:CreateTexture(nil, "ARTWORK")
+  r.line:SetColorTexture(1, 0.82, 0, 0.45)
+  r.line:SetPoint("BOTTOMLEFT", r, "BOTTOMLEFT", 2, 2)
+  r.line:SetPoint("BOTTOMRIGHT", r, "BOTTOMRIGHT", -2, 2)
+  r.line:SetHeight(1)
+  r.line:Hide()
+  r.icon = r:CreateTexture(nil, "ARTWORK")
+  r.icon:SetSize(30, 30)
+  r.icon:SetPoint("LEFT", r, "LEFT", 4, 0)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  r.name:SetPoint("TOPLEFT", 42, -4)
+  r.desc = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.desc:SetPoint("TOPLEFT", r.name, "BOTTOMLEFT", 0, -2)
+  r.desc:SetPoint("RIGHT", r, "RIGHT", -170, 0)
+  r.desc:SetJustifyH("LEFT")
+  r.desc:SetWordWrap(false)
+  r.state = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  r.state:SetPoint("RIGHT", -8, 0)
+
+  AttachScripts(r)
   rows[i] = r
   return r
 end
 
+-- A macro cell in the class grid: icon with the name underneath, like the game's own macro window.
+local function GetCell(i)
+  if cells[i] then return cells[i] end
+  local c = CreateFrame("Button", nil, child)
+  c:SetSize(CELL_W, CELL_H)
+  c.border = c:CreateTexture(nil, "BACKGROUND")
+  c.border:SetSize(46, 46)
+  c.border:SetPoint("TOP", c, "TOP", 0, -2)
+  c.icon = c:CreateTexture(nil, "ARTWORK")
+  c.icon:SetSize(40, 40)
+  c.icon:SetPoint("TOP", c, "TOP", 0, -5)
+  c.check = c:CreateTexture(nil, "OVERLAY")
+  c.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+  c.check:SetSize(22, 22)
+  c.check:SetPoint("BOTTOMRIGHT", c.icon, "BOTTOMRIGHT", 5, -5)
+  c.lvl = c:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  c.lvl:SetPoint("BOTTOMRIGHT", c.icon, "BOTTOMRIGHT", -2, 2)
+  c.name = c:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  c.name:SetPoint("TOP", c.icon, "BOTTOM", 0, -4)
+  c.name:SetWidth(CELL_W - 2)
+  c.name:SetHeight(24)
+  c.name:SetJustifyH("CENTER")
+  c.name:SetJustifyV("TOP")
+  c:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  local h = c:GetHighlightTexture()
+  if h then h:ClearAllPoints(); h:SetAllPoints(c.icon) end
+  AttachScripts(c)
+  cells[i] = c
+  return c
+end
+
+-- What a macro looks like right now: label, name colour, border colour (nil = none), level text, added?
+local GREEN, ORANGE, GOLD, GREY = { 0.3, 1, 0.3 }, { 1, 0.5, 0.1 }, { 1, 0.82, 0 }, { 0.5, 0.5, 0.5 }
+local function MacroState(m, checkClass, allowUpdate)
+  local st, details = ns.CheckMacro(m, checkClass)
+  local exists = GetMacroIndexByName(m.name) ~= 0
+  if exists and allowUpdate then return "click to update", GOLD, nil, nil, false, false
+  elseif exists then return "added", GREY, nil, nil, true, false
+  elseif st == "found" then return "in your spellbook", GREEN, GREEN, nil, false, false
+  elseif st == "unlearned" then
+    local label = ns.UnlearnedLabel(details)
+    return label, { 0.85, 0.85, 0.85 }, nil, label:match("lvl (%d+)"), false, true
+  elseif st == "partial" then
+    local label = ns.UnlearnedLabel(details)
+    local lvl = label:match("lvl %d+")
+    return lvl and ("works now, full at " .. lvl) or "works now, partly", GREEN, GREEN, label:match("lvl (%d+)"), false, false
+  elseif st == "problem" then return "check tooltip", ORANGE, ORANGE, nil, false, false
+  elseif st == "unconfirmed" then return "check spell name", ORANGE, ORANGE, nil, false, false
+  end
+  return "click to add", GOLD, nil, nil, false, false
+end
+
+local function RenderHeaderRow(r, e)
+  r:SetHeight(HEADER_HEIGHT)
+  r.icon:Hide()
+  r.line:Show()
+  r.name:ClearAllPoints()
+  r.name:SetPoint("BOTTOMLEFT", r, "BOTTOMLEFT", 4, 6)
+  r.name:SetText(e.label)
+  r.name:SetTextColor(ClassColor(selectedClass))
+  r.desc:SetText("")
+  r.state:SetText("")
+end
+
 local function RenderMacroRow(r, e)
   local m = e.macro
+  r:SetHeight(ROW_HEIGHT)
+  r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 42, -4)
+  r.line:Hide()
+  r.icon:SetTexture(ns.MacroIcon(m))
+  r.icon:Show()
   r.name:SetText(m.name)
   r.desc:SetText(m.desc or "")
-  local st, details = ns.CheckMacro(m, e.checkClass)
-  local exists = GetMacroIndexByName(m.name) ~= 0
-  if exists and e.allowUpdate then
-    r.state:SetText("click to update")
-    r.name:SetTextColor(1, 0.82, 0)
-  elseif exists then
-    r.state:SetText("added")
-    r.name:SetTextColor(0.5, 0.5, 0.5)
-  elseif st == "found" then
-    r.state:SetText("in your spellbook")
-    r.name:SetTextColor(0.3, 1, 0.3)
-  elseif st == "unlearned" then
-    r.state:SetText(ns.UnlearnedLabel(details))
-    r.name:SetTextColor(0.85, 0.85, 0.85)
-  elseif st == "partial" then
-    local lvl = ns.UnlearnedLabel(details):match("lvl %d+")
-    r.state:SetText(lvl and ("works now, full at " .. lvl) or "works now, partly")
-    r.name:SetTextColor(0.3, 1, 0.3)
-  elseif st == "problem" then
-    r.state:SetText("check tooltip")
-    r.name:SetTextColor(1, 0.5, 0.1)
-  elseif st == "unconfirmed" then
-    r.state:SetText("check spell name")
-    r.name:SetTextColor(1, 0.5, 0.1)
-  else
-    r.state:SetText("click to add")
-    r.name:SetTextColor(1, 0.82, 0)
-  end
+  local text, color = MacroState(m, e.checkClass, e.allowUpdate)
+  r.state:SetText(text)
+  r.name:SetTextColor(color[1], color[2], color[3])
 end
 
 local function RenderActionRow(r, e)
+  r:SetHeight(ROW_HEIGHT)
+  r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 42, -4)
+  r.icon:Hide()
+  r.line:Hide()
   r.name:SetText(e.label)
   r.desc:SetText(e.desc or "")
   r.state:SetText(e.state or "")
   r.name:SetTextColor(unpack(e.color or { 1, 0.82, 0 }))
+end
+
+local function RenderCell(c, e)
+  local m = e.macro
+  local _, color, border, lvl, added, dim = MacroState(m, e.checkClass, e.allowUpdate)
+  c.icon:SetTexture(ns.MacroIcon(m))
+  c.icon:SetDesaturated(dim and true or false)
+  c.icon:SetAlpha(added and 0.55 or 1)
+  c.name:SetText(m.name)
+  c.name:SetTextColor(color[1], color[2], color[3])
+  if border then c.border:SetColorTexture(border[1], border[2], border[3], 1)
+  else c.border:SetColorTexture(0, 0, 0, 0.7) end
+  c.check:SetShown(added)
+  c.lvl:SetText(lvl or "")
 end
 
 ---------------------------------------------------------------------------
@@ -346,7 +518,8 @@ local function SavedEntries()
         ns.RemoveSaved(i)
         Print("Removed \"" .. s.name .. "\" from your saved macros.")
       end,
-      tip = { "Click to add to this character. Shift-click to remove it from your saved macros." },
+      onAlt = function() ns.EditSaved(i) end,
+      tip = { "Click to add to this character. Alt-click to edit it. Shift-click to remove it from your saved macros." },
     }
   end
   if #entries == 0 then
@@ -424,11 +597,294 @@ local function WeaponEntries()
   return entries
 end
 
+---------------------------------------------------------------------------
+-- Editor: type a macro, save it to My Macros (account-wide), add it on any character.
+-- Laid out like the game's own macro window (icon + name, "Enter Macro Commands:", character
+-- counter, Save / Cancel / Delete) so it feels familiar. It does not replace that window.
+---------------------------------------------------------------------------
+local editor = CreateFrame("Frame", nil, frame)
+editor:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140)
+editor:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 36)
+editor:Hide()
+local editingIndex
+
+---------------------------------------------------------------------------
+-- Icon picker: every icon the game offers for macros (GetLooseMacroIcons, GetMacroIcons and the
+-- item versions, the same lists the game's own icon selector reads), in a scrollable grid.
+---------------------------------------------------------------------------
+local chosenIcon
+local COLS, GRID_ROWS, CELL = 8, 9, 36
+local iconList
+local function IconTexturePath(v)
+  local id = tonumber(v)
+  if id then return id end
+  return "Interface\\Icons\\" .. tostring(v)
+end
+local function LoadIcons()
+  if iconList then return iconList end
+  iconList = {}
+  for _, fnName in ipairs({ "GetLooseMacroIcons", "GetMacroIcons", "GetLooseMacroItemIcons", "GetMacroItemIcons" }) do
+    local fn = _G[fnName]
+    if type(fn) == "function" then pcall(fn, iconList) end
+  end
+  return iconList
+end
+
+local picker = CreateFrame("Frame", "ReadyMacrosIconPicker", UIParent, "BasicFrameTemplateWithInset")
+picker:SetSize(COLS * CELL + 60, GRID_ROWS * CELL + 80)
+picker:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, 0)
+picker:SetFrameStrata("DIALOG")
+picker:EnableMouse(true)
+picker:Hide()
+tinsert(UISpecialFrames, "ReadyMacrosIconPicker")
+local pickerTitle = picker:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+pickerTitle:SetPoint("TOP", picker, "TOP", 0, -5)
+pickerTitle:SetText("Choose an icon")
+
+local pickerOffset = 0 -- first visible grid row (0-based)
+local pickerButtons = {}
+local pickerSlider
+local PickerRefresh
+local pickerCallback
+
+local function MaxOffset()
+  local n = #LoadIcons()
+  return math.max(0, math.ceil(n / COLS) - GRID_ROWS)
+end
+
+function PickerRefresh()
+  local list = LoadIcons()
+  for i, b in ipairs(pickerButtons) do
+    local idx = pickerOffset * COLS + i
+    local v = list[idx]
+    if v ~= nil then
+      b.iconValue = IconTexturePath(v)
+      b.tex:SetTexture(b.iconValue)
+      b:Show()
+    else
+      b.iconValue = nil
+      b:Hide()
+    end
+  end
+end
+
+local function PickerSetOffset(o)
+  o = math.min(math.max(math.floor(o + 0.5), 0), MaxOffset())
+  if o == pickerOffset then return end
+  pickerOffset = o
+  if pickerSlider then pickerSlider.updating = true; pickerSlider:SetValue(o); pickerSlider.updating = false end
+  PickerRefresh()
+end
+
+for i = 1, COLS * GRID_ROWS do
+  local b = CreateFrame("Button", nil, picker)
+  b:SetSize(CELL - 4, CELL - 4)
+  local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
+  b:SetPoint("TOPLEFT", picker, "TOPLEFT", 14 + col * CELL, -32 - row * CELL)
+  b.tex = b:CreateTexture(nil, "ARTWORK")
+  b.tex:SetAllPoints(b)
+  b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  b:SetScript("OnClick", function(self)
+    if self.iconValue and pickerCallback then pickerCallback(self.iconValue) end
+    picker:Hide()
+  end)
+  pickerButtons[i] = b
+end
+
+pickerSlider = CreateFrame("Slider", nil, picker)
+pickerSlider:SetOrientation("VERTICAL")
+pickerSlider:SetSize(14, GRID_ROWS * CELL)
+pickerSlider:SetPoint("TOPRIGHT", picker, "TOPRIGHT", -12, -32)
+local sliderBg = pickerSlider:CreateTexture(nil, "BACKGROUND")
+sliderBg:SetAllPoints(pickerSlider)
+sliderBg:SetColorTexture(0, 0, 0, 0.5)
+local thumb = pickerSlider:CreateTexture(nil, "OVERLAY")
+thumb:SetColorTexture(1, 0.82, 0, 0.8)
+thumb:SetSize(14, 30)
+pickerSlider:SetThumbTexture(thumb)
+pickerSlider:SetMinMaxValues(0, 0)
+pickerSlider:SetValueStep(1)
+pickerSlider:SetScript("OnValueChanged", function(self, v)
+  if self.updating then return end
+  PickerSetOffset(v)
+end)
+picker:EnableMouseWheel(true)
+picker:SetScript("OnMouseWheel", function(_, delta) PickerSetOffset(pickerOffset - delta * 3) end)
+
+function ns.OpenIconPicker(callback)
+  pickerCallback = callback
+  pickerOffset = 0
+  local maxO = MaxOffset()
+  pickerSlider:SetMinMaxValues(0, maxO)
+  pickerSlider.updating = true; pickerSlider:SetValue(0); pickerSlider.updating = false
+  PickerRefresh()
+  if #LoadIcons() == 0 then Print("The game didn't give a list of icons to choose from.") end
+  picker:Show()
+end
+
+local iconBtn = CreateFrame("Button", nil, editor)
+iconBtn:SetSize(36, 36)
+iconBtn:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -6)
+local previewIcon = iconBtn:CreateTexture(nil, "ARTWORK")
+previewIcon:SetAllPoints(iconBtn)
+previewIcon:SetTexture(ICON)
+iconBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+iconBtn:SetScript("OnEnter", function(self)
+  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+  GameTooltip:AddLine("Click to choose an icon", 1, 1, 1)
+  GameTooltip:AddLine("Without one, the icon follows the spell in your macro.", 0.8, 0.8, 0.8, true)
+  GameTooltip:Show()
+end)
+iconBtn:SetScript("OnLeave", GameTooltip_Hide)
+
+local nameLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+nameLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 52, -2)
+nameLabel:SetText("Macro name (max 16)")
+local nameBox = CreateFrame("EditBox", nil, editor, "InputBoxTemplate")
+nameBox:SetSize(220, 22)
+nameBox:SetPoint("TOPLEFT", editor, "TOPLEFT", 58, -18)
+nameBox:SetAutoFocus(false)
+nameBox:SetMaxLetters(16)
+nameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+local bodyLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+bodyLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -54)
+bodyLabel:SetText("Enter Macro Commands:")
+
+-- A visible, clickable box: clicking anywhere in it puts the cursor in the text.
+local bodyArea = CreateFrame("Button", nil, editor)
+bodyArea:SetSize(512, 170)
+bodyArea:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -72)
+local areaBg = bodyArea:CreateTexture(nil, "BACKGROUND")
+areaBg:SetAllPoints(bodyArea)
+areaBg:SetColorTexture(0.05, 0.05, 0.12, 0.95)
+local function Edge(p1, p2, w, h)
+  local t = bodyArea:CreateTexture(nil, "BORDER")
+  t:SetColorTexture(0.6, 0.6, 0.6, 0.8)
+  t:SetPoint(p1, bodyArea, p1, 0, 0)
+  t:SetPoint(p2, bodyArea, p2, 0, 0)
+  if w then t:SetWidth(w) end
+  if h then t:SetHeight(h) end
+end
+Edge("TOPLEFT", "TOPRIGHT", nil, 1); Edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, 1)
+Edge("TOPLEFT", "BOTTOMLEFT", 1, nil); Edge("TOPRIGHT", "BOTTOMRIGHT", 1, nil)
+
+local bodyBox = CreateFrame("EditBox", nil, bodyArea)
+bodyBox:SetMultiLine(true)
+bodyBox:SetAutoFocus(false)
+bodyBox:SetFontObject(ChatFontNormal)
+bodyBox:SetMaxLetters(255)
+bodyBox:SetPoint("TOPLEFT", bodyArea, "TOPLEFT", 8, -8)
+bodyBox:SetPoint("BOTTOMRIGHT", bodyArea, "BOTTOMRIGHT", -8, 8)
+bodyBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+bodyArea:SetScript("OnClick", function() bodyBox:SetFocus() end)
+
+local counter = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+counter:SetPoint("TOP", bodyArea, "BOTTOM", 0, -4)
+
+local function UpdateCounter()
+  local text = bodyBox:GetText() or ""
+  local n = #text
+  counter:SetText(n .. "/255 Characters Used")
+  if n >= 255 then counter:SetTextColor(1, 0.3, 0.3) else counter:SetTextColor(1, 1, 1) end
+  previewIcon:SetTexture(chosenIcon or ns.MacroIcon({ body = text }))
+end
+bodyBox:SetScript("OnTextChanged", UpdateCounter)
+
+iconBtn:SetScript("OnClick", function()
+  ns.OpenIconPicker(function(tex) chosenIcon = tex; UpdateCounter() end)
+end)
+
+local editorNote = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+editorNote:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -274)
+editorNote:SetWidth(520)
+editorNote:SetJustifyH("LEFT")
+
+local deleteBtn
+local function EditorClear()
+  editingIndex = nil
+  chosenIcon = nil
+  nameBox:SetText(""); bodyBox:SetText("")
+  UpdateCounter()
+  if deleteBtn then deleteBtn:Disable() end
+  editorNote:SetText("Save to list: keeps it for all your characters. Save and add here: also creates it on this character now.")
+end
+
+function ns.EditSaved(index)
+  local s = ns.GetSaved()[index]
+  if not s then return end
+  selectedSpec = "New macro"
+  nameBox:SetText(s.name); bodyBox:SetText(s.body)
+  editingIndex = index
+  chosenIcon = (s.icon and s.icon ~= ICON) and s.icon or nil
+  UpdateCounter()
+  if deleteBtn then deleteBtn:Enable() end
+  editorNote:SetText("Editing \"" .. s.name .. "\". Save replaces it in your saved macros (characters that already added it keep their copy).")
+  resetScroll = true
+  Refresh()
+end
+
+local function EditorSave(addHere)
+  local ok, res = ns.SaveCustom(nameBox:GetText(), bodyBox:GetText(), ns.playerClass, editingIndex, chosenIcon)
+  if not ok then Print(res); return end
+  Print("Saved \"" .. res .. "\". It's now in My Macros > Saved on every character.")
+  if addHere then AddMacro({ name = res, icon = chosenIcon, body = (bodyBox:GetText():gsub("\r", "")) }, nil, false) end
+  EditorClear()
+  Refresh()
+end
+
+local function Tip(btn, text)
+  btn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine(text, 1, 1, 1, true)
+    GameTooltip:Show()
+  end)
+  btn:SetScript("OnLeave", GameTooltip_Hide)
+end
+
+local function EditorButton(label, width, anchorTo, handler)
+  local b = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+  b:SetSize(width, 24)
+  if anchorTo then b:SetPoint("LEFT", anchorTo, "RIGHT", 6, 0)
+  else b:SetPoint("BOTTOMLEFT", editor, "BOTTOMLEFT", 4, 4) end
+  b:SetText(label)
+  b:SetScript("OnClick", handler)
+  return b
+end
+
+local saveBtn = EditorButton("Save to list", 100, nil, function() EditorSave(false) end)
+local saveAddBtn = EditorButton("Save and add here", 130, saveBtn, function() EditorSave(true) end)
+local cancelBtn = EditorButton("Cancel", 60, saveAddBtn, function() EditorClear(); Refresh() end)
+deleteBtn = EditorButton("Delete", 60, cancelBtn, function()
+  if editingIndex then
+    local s = ns.GetSaved()[editingIndex]
+    ns.RemoveSaved(editingIndex)
+    Print("Removed \"" .. (s and s.name or "macro") .. "\" from your saved macros.")
+  end
+  EditorClear()
+  Refresh()
+end)
+Tip(saveBtn, "Saves the macro to your list (Saved tab), shared by all your characters. Nothing is created on this character yet.")
+Tip(saveAddBtn, "Saves it to your list AND creates it on this character, so it appears in the game's macro window.")
+Tip(cancelBtn, "Clears the editor without saving.")
+Tip(deleteBtn, "Removes the macro you are editing from your saved list.")
+EditorClear()
+
+-- One view per class: every spec's macros in turn, each section opened by a header row
+-- ("All specs" = the Utility macros). Classes without specs show their macros with no header.
 local function ClassEntries(data)
   local entries = {}
-  for _, m in ipairs(data.macros[selectedSpec] or data.macros[ns.UTILITY] or {}) do
-    entries[#entries + 1] = { kind = "macro", macro = m, checkClass = selectedClass }
+  local function section(label, spec, list)
+    if not list or #list == 0 then return end
+    if #data.specs > 0 then
+      entries[#entries + 1] = { kind = "header", label = label, spec = spec }
+    end
+    for _, m in ipairs(list) do
+      entries[#entries + 1] = { kind = "macro", macro = m, checkClass = selectedClass, spec = spec }
+    end
   end
+  for _, spec in ipairs(data.specs) do section(spec, spec, data.macros[spec]) end
+  section("All specs", ns.UTILITY, data.macros[ns.UTILITY])
   return entries
 end
 
@@ -450,18 +906,15 @@ function Refresh()
   header:SetText(ClassName(selectedClass))
   header:SetTextColor(ClassColor(selectedClass))
 
-  -- tabs
+  -- sub-tabs exist only in My Macros; a class is one list with a header per spec
   local tabs = {}
   if isSaved then
     for _, s in ipairs(SAVED_TABS) do tabs[#tabs + 1] = s end
-  else
-    for _, s in ipairs(data.specs) do tabs[#tabs + 1] = s end
-    if #tabs > 0 then tabs[#tabs + 1] = ns.UTILITY end
   end
   for i, t in ipairs(specTabs) do
     local spec = tabs[i]
     if spec then
-      t:SetText(spec == ns.UTILITY and "All specs" or spec)
+      t:SetText(spec)
       t.spec = spec
       if spec == selectedSpec then t:LockHighlight() else t:UnlockHighlight() end
       t:Show()
@@ -472,37 +925,70 @@ function Refresh()
 
   -- entries
   local entries
-  if isSaved then
+  local showEditor = isSaved and selectedSpec == "New macro"
+  editor:SetShown(showEditor)
+  if showEditor then entries = {}
+  elseif isSaved then
     if selectedSpec == "Import" then entries = ImportEntries()
     elseif selectedSpec == "Weapon swap" then entries = WeaponEntries()
     else entries = SavedEntries() end
-    hint:SetText(selectedSpec == "Saved" and "Shift-click a saved macro to remove it." or "")
+    hint:SetText(selectedSpec == "Saved" and "Alt-click edits, shift-click removes." or "")
   else
     entries = ClassEntries(data)
-    hint:SetText("Green = known. Grey = learn later. Orange = check it.")
+    hint:SetText("Green border = known. Grey = learn later. Orange = check it.")
   end
 
-  -- paging
-  local pages = math.max(1, math.ceil(#entries / MAX_ROWS))
-  page = math.min(math.max(page, 1), pages)
-  pager:SetShown(pages > 1)
-  pageText:SetText(("Page %d / %d"):format(page, pages))
-  if page > 1 then prevBtn:Enable() else prevBtn:Disable() end
-  if page < pages then nextBtn:Enable() else nextBtn:Disable() end
-
-  local first = (page - 1) * MAX_ROWS
-  local shown = 0
-  for i = 1, MAX_ROWS do
-    local e = entries[first + i]
-    if e then
-      local r = GetRow(i)
+  -- layout: classes are a grid of icon cells under spec headers; My Macros lists are rows
+  local grid = not isSaved
+  PlaceScroll(isSaved and 140 or 112)
+  scroll:SetShown(not showEditor)
+  scrollBar:SetShown(not showEditor)
+  local y, col, usedRows, usedCells = 0, 0, 0, 0
+  local focusY
+  local function endLine() if col > 0 then y = y + CELL_H; col = 0 end end
+  for _, e in ipairs(entries) do
+    if e.kind == "header" then
+      endLine()
+      usedRows = usedRows + 1
+      local r = GetRow(usedRows)
+      r:ClearAllPoints(); r:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
+      r.entry = e; RenderHeaderRow(r, e); r:Show()
+      if focusSpec and e.spec == focusSpec and not focusY then focusY = y end
+      y = y + HEADER_HEIGHT
+    elseif grid and e.kind == "macro" then
+      usedCells = usedCells + 1
+      local c = GetCell(usedCells)
+      c:ClearAllPoints(); c:SetPoint("TOPLEFT", child, "TOPLEFT", col * CELL_W + 3, -y)
+      c.entry = e; RenderCell(c, e); c:Show()
+      col = col + 1
+      if col == GRID_COLS then col = 0; y = y + CELL_H end
+    else
+      endLine()
+      usedRows = usedRows + 1
+      local r = GetRow(usedRows)
+      r:ClearAllPoints(); r:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -y)
       r.entry = e
       if e.kind == "macro" then RenderMacroRow(r, e) else RenderActionRow(r, e) end
       r:Show()
-      shown = i
+      y = y + ROW_HEIGHT + 2
     end
   end
-  for i = shown + 1, #rows do rows[i].entry = nil; rows[i]:Hide() end
+  endLine()
+  for i = usedRows + 1, #rows do rows[i].entry = nil; rows[i]:Hide() end
+  for i = usedCells + 1, #cells do cells[i].entry = nil; cells[i]:Hide() end
+
+  child:SetHeight(math.max(y, 10))
+  local viewH = (scroll:GetHeight() or 0)
+  if not viewH or viewH <= 0 then viewH = isSaved and 328 or 356 end
+  scrollMax = math.max(0, y - viewH)
+  scrollBar:SetMinMaxValues(0, scrollMax)
+  if resetScroll then
+    SetScroll(focusY or 0)
+    resetScroll = false
+  else
+    SetScroll(scrollOffset)
+  end
+  focusSpec = nil
 
   local _, numChar = GetNumMacros()
   status:SetText(("Character macros: %d / %d"):format(numChar, MaxCharMacros()))
@@ -510,16 +996,21 @@ end
 
 local function SelectSpec(spec)
   selectedSpec = spec
-  page = 1
-  if ReadyMacrosDB and selectedClass then ReadyMacrosDB.lastSpec[selectedClass] = spec end
+  resetScroll = true
   Refresh()
 end
 
+-- preferredSpec (from spec detection) only decides where a class list opens: scrolled to that spec.
 local function SelectClass(key, preferredSpec)
   selectedClass = key
-  page = 1
-  local default = key == SAVED and SAVED_TABS[1] or (ns.CLASSES[key].specs[1] or ns.UTILITY)
-  selectedSpec = preferredSpec or (ReadyMacrosDB and ReadyMacrosDB.lastSpec[key]) or default
+  resetScroll = true
+  if key == SAVED then
+    selectedSpec = SAVED_TABS[1]
+    focusSpec = nil
+  else
+    selectedSpec = nil
+    focusSpec = preferredSpec
+  end
   Refresh()
 end
 
@@ -549,10 +1040,12 @@ events:SetScript("OnEvent", function(_, event)
     ns.playerClass = classFile
     local key = ns.CLASSES[classFile] and classFile or "GENERAL"
     local data = ns.CLASSES[key]
+    ns.CacheSpellIcons()
     local idx = DetectSpecIndex(#data.specs)
     SelectClass(key, idx and data.specs[idx] or nil)
-  elseif frame:IsShown() then
-    Refresh()
+  else
+    if event == "SPELLS_CHANGED" then ns.CacheSpellIcons() end
+    if frame:IsShown() then Refresh() end
   end
 end)
 

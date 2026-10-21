@@ -1,7 +1,7 @@
 -- Minimal stand-in for the WoW client API, enough to load Ready Macros outside the game.
 -- It is NOT the real client: frames only record text, scripts and visibility. Passing tests
 -- prove the addon's own logic, not how the game renders or behaves.
-local M = { frames = {}, printed = {}, macros = {}, equipped = {}, known = {}, ids = {}, shift = false }
+local M = { frames = {}, printed = {}, macros = {}, equipped = {}, known = {}, ids = {}, shift = false, alt = false }
 
 local function newObj(kind)
   local o = { _kind = kind, _shown = true, _scripts = {}, _text = "", _enabled = true }
@@ -18,6 +18,9 @@ local function newObj(kind)
       IsShown = function(self) return self._shown end,
       SetText = function(self, v) self._text = v end,
       GetText = function(self) return self._text end,
+      SetVerticalScroll = function(self, v) self._vscroll = v end,
+      SetMinMaxValues = function(self, a, b) self._min, self._max = a, b end,
+      SetFocus = function(self) M.focused = self end,
       Enable = function(self) self._enabled = true end,
       Disable = function(self) self._enabled = false end,
       CreateFontString = function() return newObj("FontString") end,
@@ -75,6 +78,11 @@ function M.install(opts)
   end
   InCombatLockdown = function() return false end
   IsShiftKeyDown = function() return M.shift end
+  GetLooseMacroIcons = function(t) for i = 1, 100 do t[#t + 1] = "LOOSE_" .. i end end
+  GetMacroIcons = function(t) for i = 1, 100 do t[#t + 1] = 1000 + i end end
+  PickupMacro = function(i) M.picked = i end
+  ShowMacroFrame = function() M.macroFrameOpened = true end
+  IsAltKeyDown = function() return M.alt end
   local class = opts.class or "WARRIOR"
   UnitClass = function() return class, class end
   UnitName = function() return "Tester" end
@@ -92,9 +100,10 @@ function M.install(opts)
   GetInventoryItemLink = function(_, slot) return M.equipped[slot] end
   GetInventoryItemTexture = function(_, slot) return 9000 + slot end
   C_Spell = { GetSpellInfo = function(x)
-    if type(x) == "number" then local n = M.ids[x]; return n and { name = n, spellID = x } or nil end
-    local id = M.known[x]; return id and { name = x, spellID = id } or nil
+    if type(x) == "number" then local n = M.ids[x]; return n and { name = n, spellID = x, iconID = 5000 + x } or nil end
+    local id = M.known[x]; return id and { name = x, spellID = id, iconID = 5000 + id } or nil
   end }
+  C_Spell.GetSpellTexture = function(id) if type(id) == "number" and M.textures and M.textures[id] then return M.textures[id] end end
   IsPlayerSpell = function(id) local n = M.ids[id]; return n ~= nil and M.known[n] ~= nil end
   -- Forever's real namespaces (Blizzard_APIDocumentationGenerated: SpellBookDocumentation, SpecializationInfoDocumentation)
   Enum = Enum or {}

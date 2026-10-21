@@ -6,6 +6,10 @@
 --             (see the "Sources" comment on each class). v = false means the name is
 --             carried over from original Classic and should be checked in your spellbook.
 --
+-- 21 Oct 2026: every spell name used in a macro body except Mangle (druid) was also found, with the right class,
+-- in Wowhead's Forever class spell lists (see SPELL_ICON_IDS in SpellIDs.lua), so no macro is v = false now.
+-- Mangle is not in those lists (only "Engrave Gloves - Mangle"); its macro stays v = true on the earlier sources.
+--
 -- Research date: 27 Sept 2026, against beta/BlizzCon-demo coverage. Forever is still in beta,
 -- so names can change before the 4 Nov 2026 launch.
 local _, ns = ...
@@ -125,7 +129,7 @@ ns.CLASSES = {
         { name = "Judgement", desc = "Start attacking + Judgement (keeps seal now)",
           body = "#showtooltip\n/startattack\n/cast Judgement", v = true },
         { name = "Divine Shield", desc = "Divine Shield",
-          body = "#showtooltip\n/cast Divine Shield", v = false },
+          body = "#showtooltip\n/cast Divine Shield", v = true },
       },
       Holy = {
         { name = "MO Holy Shock", desc = "Holy Shock mouseover (heal or damage)",
@@ -175,9 +179,9 @@ ns.CLASSES = {
         { name = "Pet Attack", desc = "Send pet to attack", body = "/petattack", v = true },
         { name = "Pet Follow", desc = "Call pet back", body = "/petfollow", v = true },
         { name = "Feign Death", desc = "Feign Death and drop target",
-          body = "#showtooltip Feign Death\n/petfollow\n/cast Feign Death", v = false },
+          body = "#showtooltip Feign Death\n/petfollow\n/cast Feign Death", v = true },
         { name = "Mark + Pet", desc = "Hunter's Mark and send pet",
-          body = "#showtooltip\n/cast Hunter's Mark\n/petattack", v = false },
+          body = "#showtooltip\n/cast Hunter's Mark\n/petattack", v = true },
       },
       ["Beast Mastery"] = {
         { name = "Arcane + Pet", desc = "Send pet + Arcane Shot",
@@ -185,9 +189,9 @@ ns.CLASSES = {
         { name = "Summon Hawk", desc = "Summon a hawk (talent)",
           body = "#showtooltip\n/cast Summon Hawk", v = true },
         { name = "Bestial Wrath", desc = "Bestial Wrath + send pet",
-          body = "#showtooltip\n/petattack\n/cast Bestial Wrath", v = false },
+          body = "#showtooltip\n/petattack\n/cast Bestial Wrath", v = true },
         { name = "Mend Pet", desc = "Heal your pet",
-          body = "#showtooltip\n/cast Mend Pet", v = false },
+          body = "#showtooltip\n/cast Mend Pet", v = true },
       },
       Marksmanship = {
         { name = "Aimed Shot", desc = "Aimed Shot (shares CD with Multi-Shot)",
@@ -227,7 +231,7 @@ ns.CLASSES = {
         { name = "Vanish", desc = "Stop attacking, then Vanish",
           body = "#showtooltip Vanish\n/stopattack\n/cast Vanish", nostart = "Stops attacking on purpose so you can re-stealth", v = true },
         { name = "Kick", desc = "Interrupt with Kick",
-          body = "#showtooltip\n/startattack\n/cast Kick", v = false },
+          body = "#showtooltip\n/startattack\n/cast Kick", v = true },
       },
       Assassination = {
         { name = "Mutilate", desc = "Start attacking + Mutilate",
@@ -241,7 +245,7 @@ ns.CLASSES = {
       },
       Combat = {
         { name = "Sinister", desc = "Start attacking + Sinister Strike",
-          body = "#showtooltip\n/startattack\n/cast Sinister Strike", v = false },
+          body = "#showtooltip\n/startattack\n/cast Sinister Strike", v = true },
         { name = "Adrenaline", desc = "Adrenaline Rush",
           body = "#showtooltip\n/cast Adrenaline Rush", nostart = "Cooldown, not an attack", v = true },
         { name = "Blade Flurry", desc = "Blade Flurry",
@@ -278,7 +282,7 @@ ns.CLASSES = {
         { name = "MO SW Death", desc = "Shadow Word: Death on mouseover",
           body = "#showtooltip\n/cast [@mouseover,harm,nodead][] Shadow Word: Death", v = true },
         { name = "MO Dispel", desc = "Dispel Magic on mouseover, else target",
-          body = "#showtooltip\n/cast [@mouseover,exists,nodead][] Dispel Magic", v = false },
+          body = "#showtooltip\n/cast [@mouseover,exists,nodead][] Dispel Magic", v = true },
       },
       Discipline = {
         { name = "MO Penance", desc = "Penance mouseover (heal or damage)",
@@ -288,7 +292,7 @@ ns.CLASSES = {
         { name = "MO Spirit", desc = "Divine Spirit on mouseover",
           body = "#showtooltip\n/cast [@mouseover,help,nodead][] Divine Spirit", v = true },
         { name = "MO Flash Heal", desc = "Flash Heal on mouseover, else target",
-          body = "#showtooltip\n/cast [@mouseover,help,nodead][] Flash Heal", v = false },
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][] Flash Heal", v = true },
       },
       Holy = {
         { name = "MO Mending", desc = "Prayer of Mending on mouseover",
@@ -298,7 +302,7 @@ ns.CLASSES = {
         { name = "Group Heal", desc = "Prayer of Healing",
           body = "#showtooltip\n/cast Prayer of Healing", v = true },
         { name = "MO Renew", desc = "Renew on mouseover, else target",
-          body = "#showtooltip\n/cast [@mouseover,help,nodead][] Renew", v = false },
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][] Renew", v = true },
       },
       Shadow = {
         { name = "MO SW Pain", desc = "Shadow Word: Pain on mouseover",
@@ -374,9 +378,9 @@ ns.CLASSES = {
     macros = {
       Utility = {
         { name = "MO Polymorph", desc = "Polymorph mouseover, else target",
-          body = "#showtooltip\n/cast [@mouseover,harm,nodead][] Polymorph", v = false },
+          body = "#showtooltip\n/cast [@mouseover,harm,nodead][] Polymorph", v = true },
         { name = "Counterspell", desc = "Stop casting, then Counterspell",
-          body = "#showtooltip Counterspell\n/stopcasting\n/cast Counterspell", v = false },
+          body = "#showtooltip Counterspell\n/stopcasting\n/cast Counterspell", v = true },
         { name = "Frostfire", desc = "Frostfire Bolt (baseline now)",
           body = "#showtooltip\n/cast Frostfire Bolt", v = true },
       },
@@ -400,7 +404,7 @@ ns.CLASSES = {
         { name = "Ice Lance", desc = "Ice Lance",
           body = "#showtooltip\n/cast Ice Lance", v = true },
         { name = "Frost Nova", desc = "Frost Nova",
-          body = "#showtooltip\n/cast Frost Nova", v = false },
+          body = "#showtooltip\n/cast Frost Nova", v = true },
       },
     },
   },
@@ -471,7 +475,7 @@ ns.CLASSES = {
         { name = "Wrath", desc = "Wrath",
           body = "#showtooltip\n/cast Wrath", v = true },
         { name = "MO Moonfire", desc = "Moonfire on mouseover, else target",
-          body = "#showtooltip\n/cast [@mouseover,harm,nodead][] Moonfire", v = false },
+          body = "#showtooltip\n/cast [@mouseover,harm,nodead][] Moonfire", v = true },
       },
       ["Feral Combat"] = {
         { name = "Maul", desc = "Start attacking + Maul",

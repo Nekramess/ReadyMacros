@@ -47,7 +47,8 @@ for _, c in ipairs(cases) do
 end
 
 -- Other classes are not checked in-game; they use the research flag.
-T.eq(ns.CheckMacro(ns.CLASSES.MAGE.macros.Utility[1], "MAGE"), "unconfirmed", "other class, unconfirmed name")
+T.eq(ns.CheckMacro({ name = "X", body = "/cast Imaginary Spell", v = false }, "MAGE"), "unconfirmed", "other class, unconfirmed name (macro flagged v = false)")
+T.eq(ns.CheckMacro({ name = "X", body = "/cast Fireball", v = true }, "MAGE"), "ok", "other class, confirmed name")
 T.eq(ns.CheckMacro({ name = "x", body = "#showtooltip\n/cast Frostbolt", v = true }, "MAGE"), "ok", "other class, confirmed name")
 
 -- Renamed and removed spells
