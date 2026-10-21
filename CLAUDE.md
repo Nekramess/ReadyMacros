@@ -98,4 +98,6 @@ The current release zip lives in the repo: `releases/ReadyMacros-v<Version>-fore
 
 ## UI style
 
+A class is ONE list (no spec tabs): sections per spec, each opened by a header row (`kind = "header"`), "All specs" (Utility) last, paged 9 rows at a time (`Paginate` in `ReadyMacros.lua`: a header never ends a page; a section split across pages repeats as "<spec> (continued)"). Spec detection only chooses which page opens (`focusSpec`). The sub-tabs (Saved, New macro, Import, Weapon swap) exist only under My Macros.
+
 The editor and macro rows deliberately echo the game's own macro window (macro icon on each row, "Enter Macro Commands:", "N/255 Characters Used", Save/Cancel/Delete). Anthony's wish: familiar, but clearly an add-on to the game's macro window, not a replacement.

@@ -7,6 +7,7 @@ local GENERAL_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local SAVED_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 local PREFIX = "|cff33ccffReady Macros:|r "
 local MAX_ROWS = 8
+local MAX_ROWS_CLASS = 9
 
 local SAVED = "SAVED" -- the "My Macros" view
 local SAVED_TABS = { "Saved", "New macro", "Import", "Weapon swap" }
@@ -15,7 +16,7 @@ local VIEW_ORDER = {}
 for _, key in ipairs(ns.CLASS_ORDER) do VIEW_ORDER[#VIEW_ORDER + 1] = key end
 VIEW_ORDER[#VIEW_ORDER + 1] = SAVED
 
-local selectedClass, selectedSpec
+local selectedClass, selectedSpec, focusSpec
 local page = 1
 
 local function Print(msg) print(PREFIX .. msg) end
@@ -279,6 +280,12 @@ local function GetRow(i)
   r:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140 - (i - 1) * (ROW_HEIGHT + 2))
   r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
 
+  r.line = r:CreateTexture(nil, "ARTWORK")
+  r.line:SetColorTexture(1, 0.82, 0, 0.45)
+  r.line:SetPoint("BOTTOMLEFT", r, "BOTTOMLEFT", 4, 2)
+  r.line:SetPoint("BOTTOMRIGHT", r, "BOTTOMRIGHT", -4, 2)
+  r.line:SetHeight(1)
+  r.line:Hide()
   r.icon = r:CreateTexture(nil, "ARTWORK")
   r.icon:SetSize(30, 30)
   r.icon:SetPoint("LEFT", r, "LEFT", 4, 0)
@@ -320,7 +327,7 @@ local function GetRow(i)
   end)
   r:SetScript("OnEnter", function(self)
     local e = self.entry
-    if not e then return end
+    if not e or e.kind == "header" then return end
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     if e.kind == "macro" then
       GameTooltip:AddLine(e.macro.name, 1, 1, 1)
@@ -344,8 +351,18 @@ local function GetRow(i)
   return r
 end
 
+local function RenderHeaderRow(r, e)
+  r.icon:Hide()
+  r.line:Show()
+  r.name:SetText(e.label)
+  r.name:SetTextColor(ClassColor(selectedClass))
+  r.desc:SetText("")
+  r.state:SetText("")
+end
+
 local function RenderMacroRow(r, e)
   local m = e.macro
+  r.line:Hide()
   r.icon:SetTexture(ns.MacroIcon(m))
   r.icon:Show()
   r.name:SetText(m.name)
@@ -382,6 +399,7 @@ end
 
 local function RenderActionRow(r, e)
   r.icon:Hide()
+  r.line:Hide()
   r.name:SetText(e.label)
   r.desc:SetText(e.desc or "")
   r.state:SetText(e.state or "")
@@ -763,12 +781,51 @@ Tip(cancelBtn, "Clears the editor without saving.")
 Tip(deleteBtn, "Removes the macro you are editing from your saved list.")
 EditorClear()
 
+-- One view per class: every spec's macros in turn, each section opened by a header row
+-- ("All specs" = the Utility macros). Classes without specs show their macros with no header.
 local function ClassEntries(data)
   local entries = {}
-  for _, m in ipairs(data.macros[selectedSpec] or data.macros[ns.UTILITY] or {}) do
-    entries[#entries + 1] = { kind = "macro", macro = m, checkClass = selectedClass }
+  local function section(label, spec, list)
+    if not list or #list == 0 then return end
+    if #data.specs > 0 then
+      entries[#entries + 1] = { kind = "header", label = label, spec = spec }
+    end
+    for _, m in ipairs(list) do
+      entries[#entries + 1] = { kind = "macro", macro = m, checkClass = selectedClass, spec = spec }
+    end
   end
+  for _, spec in ipairs(data.specs) do section(spec, spec, data.macros[spec]) end
+  section("All specs", ns.UTILITY, data.macros[ns.UTILITY])
   return entries
+end
+
+-- Splits entries into pages. A header never ends a page, and a page that starts partway through a
+-- section opens with a "(continued)" header so you can always see which spec you are looking at.
+local function Paginate(entries, perPage, withHeaders)
+  local pages, cur, curSpec, label = {}, {}, nil, {}
+  for _, e in ipairs(entries) do
+    if e.kind == "header" then label[e.spec] = e.label end
+  end
+  local function flush()
+    if #cur > 0 then pages[#pages + 1] = cur end
+    cur = {}
+  end
+  for _, e in ipairs(entries) do
+    if e.kind == "header" then
+      if #cur >= perPage - 1 then flush() end
+      cur[#cur + 1] = e
+      curSpec = e.spec
+    else
+      if #cur >= perPage then flush() end
+      if #cur == 0 and withHeaders and e.spec and e.spec == curSpec and label[e.spec] then
+        cur[1] = { kind = "header", label = label[e.spec] .. " (continued)", spec = e.spec }
+      end
+      cur[#cur + 1] = e
+    end
+  end
+  flush()
+  if #pages == 0 then pages[1] = {} end
+  return pages
 end
 
 ---------------------------------------------------------------------------
@@ -789,18 +846,15 @@ function Refresh()
   header:SetText(ClassName(selectedClass))
   header:SetTextColor(ClassColor(selectedClass))
 
-  -- tabs
+  -- sub-tabs exist only in My Macros; a class is one list with a header per spec
   local tabs = {}
   if isSaved then
     for _, s in ipairs(SAVED_TABS) do tabs[#tabs + 1] = s end
-  else
-    for _, s in ipairs(data.specs) do tabs[#tabs + 1] = s end
-    if #tabs > 0 then tabs[#tabs + 1] = ns.UTILITY end
   end
   for i, t in ipairs(specTabs) do
     local spec = tabs[i]
     if spec then
-      t:SetText(spec == ns.UTILITY and "All specs" or spec)
+      t:SetText(spec)
       t.spec = spec
       if spec == selectedSpec then t:LockHighlight() else t:UnlockHighlight() end
       t:Show()
@@ -824,22 +878,37 @@ function Refresh()
     hint:SetText("Green = known. Grey = learn later. Orange = check it.")
   end
 
-  -- paging
-  local pages = math.max(1, math.ceil(#entries / MAX_ROWS))
+  -- paging (classes get more rows because they have no sub-tab row)
+  local perPage = isSaved and MAX_ROWS or MAX_ROWS_CLASS
+  local rowTop = isSaved and 140 or 112
+  local pageList = Paginate(entries, perPage, not isSaved)
+  if focusSpec and not isSaved then
+    local found
+    for i, pg in ipairs(pageList) do
+      for _, e in ipairs(pg) do
+        if e.kind == "header" and e.spec == focusSpec and not found then page = i; found = true end
+      end
+    end
+  end
+  focusSpec = nil
+  local pages = #pageList
   page = math.min(math.max(page, 1), pages)
   pager:SetShown(pages > 1 and not showEditor)
   pageText:SetText(("Page %d / %d"):format(page, pages))
   if page > 1 then prevBtn:Enable() else prevBtn:Disable() end
   if page < pages then nextBtn:Enable() else nextBtn:Disable() end
 
-  local first = (page - 1) * MAX_ROWS
   local shown = 0
-  for i = 1, MAX_ROWS do
-    local e = entries[first + i]
+  for i = 1, perPage do
+    local e = pageList[page][i]
     if e then
       local r = GetRow(i)
+      r:ClearAllPoints()
+      r:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -rowTop - (i - 1) * (ROW_HEIGHT + 2))
       r.entry = e
-      if e.kind == "macro" then RenderMacroRow(r, e) else RenderActionRow(r, e) end
+      if e.kind == "macro" then RenderMacroRow(r, e)
+      elseif e.kind == "header" then RenderHeaderRow(r, e)
+      else RenderActionRow(r, e) end
       r:Show()
       shown = i
     end
@@ -853,15 +922,20 @@ end
 local function SelectSpec(spec)
   selectedSpec = spec
   page = 1
-  if ReadyMacrosDB and selectedClass then ReadyMacrosDB.lastSpec[selectedClass] = spec end
   Refresh()
 end
 
+-- preferredSpec (from spec detection) only decides which page of a class opens first.
 local function SelectClass(key, preferredSpec)
   selectedClass = key
   page = 1
-  local default = key == SAVED and SAVED_TABS[1] or (ns.CLASSES[key].specs[1] or ns.UTILITY)
-  selectedSpec = preferredSpec or (ReadyMacrosDB and ReadyMacrosDB.lastSpec[key]) or default
+  if key == SAVED then
+    selectedSpec = SAVED_TABS[1]
+    focusSpec = nil
+  else
+    selectedSpec = nil
+    focusSpec = preferredSpec
+  end
   Refresh()
 end
 
@@ -871,6 +945,14 @@ end
 for _, t in ipairs(specTabs) do
   t:SetScript("OnClick", function(self) SelectSpec(self.spec) end)
 end
+
+frame:EnableMouseWheel(true)
+frame:SetScript("OnMouseWheel", function(_, delta)
+  if pager:IsShown() then
+    page = page - delta
+    Refresh()
+  end
+end)
 
 frame:SetScript("OnShow", Refresh)
 

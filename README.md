@@ -13,8 +13,8 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 
 ## Macro lists
 - A row of class icons for all 9 classes, plus a General icon for macros that work on any class, such as Hearthstone, raid target markers and reload.
-- Each class has one tab for each of its three specs, plus an "All specs" tab.
-- The window opens on your own class. It tries to open on your current spec, and otherwise remembers the last spec you viewed.
+- Each class is one list. Its macros are grouped by spec under a header for each spec, with an "All specs" section last. Scroll with the mouse wheel or use Prev and Next.
+- The window opens on your own class. It tries to open on the page for your current spec.
 - Hover over a macro to see its full text before you add it.
 - Heals, dispels, damage-over-time spells and crowd control spells use mouseover: they cast on the unit under your mouse, or on your target if you are not hovering anything.
 - Warrior macros switch to the right stance when needed, for example Charge in Battle Stance and Intercept in Berserker Stance on one button.
@@ -45,13 +45,13 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 
 ## How to use
 - Type `/rmac` or `/readymacros` to open or close the window.
-- Pick a class and a spec tab, then click a macro to add it.
+- Pick a class, then click a macro to add it.
 - Open the game's macro window with `/macro` and drag the new macro to your action bar.
 
 ## Known limits
 - Spell names are based on beta information and may change. 14 macros use a spell name that has not been confirmed yet, and they are marked in the list.
 - Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells and three Paladin spells (Purify, Blessing of Protection, Blessing of Freedom).
-- Spec detection is a best guess and may open the wrong spec tab.
+- Spec detection is a best guess and may open the wrong spec page.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
 - The spell ID report (`/rmac ids`), My Macros (including the New macro editor), the Game macro window button, dragging rows to action bars, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
 - The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. Confirmed in the live client on 20 Oct 2026: with Leatrix Plus' "Enhance minimap" on, the old button was replaced and labelled a custom button, the new one is not (author's test).

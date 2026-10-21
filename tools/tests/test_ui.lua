@@ -11,19 +11,85 @@ T.eq(SLASH_READYMACROS1, "/readymacros", "slash command 1")
 T.eq(SLASH_READYMACROS2, "/rmac", "slash command 2")
 SlashCmdList.READYMACROS("")
 
--- Paging on Warrior > All specs
-T.press("All specs")
-local page1 = T.rows()
-T.eq(#page1, 8, "page 1 shows 8 rows")
-T.eq(T.rowName(page1[1]), ns.CLASSES.WARRIOR.macros.Utility[1].name, "page 1 starts with the first macro")
-T.press("Next")
-T.eq(#T.rows(), #ns.CLASSES.WARRIOR.macros.Utility - 8, "page 2 shows the rest")
+-- One view per class: every spec's macros under a header, no spec tabs
+local W = ns.CLASSES.WARRIOR
+local function visible(kind) local n = {} for _, f in ipairs(T.rows()) do if f.entry.kind == kind then n[#n + 1] = f end end return n end
+local function goToPage(n) while true do local b = T.button("Prev"); if b._enabled then b._scripts.OnClick(b) else break end end for _ = 2, n do T.press("Next") end end
+local function visit(fn) -- calls fn(pageNumber) on every page, then returns to page 1
+  goToPage(1)
+  local n = 1
+  while true do
+    fn(n)
+    local b = T.button("Next")
+    if not b._enabled then break end
+    b._scripts.OnClick(b); n = n + 1
+  end
+  goToPage(1)
+  return n
+end
+for _, f in ipairs(T.frames) do
+  if f._kind == "Button" and f._text and (f._text == "Assassination" or f._text == "Arms" or f._text == "Fury" or f._text == "Protection" or f._text == "All specs") and f._shown then
+    T.check(false, "no spec tab is visible on a class: " .. f._text)
+  end
+end
+local total, wantHeaders = 0, 0
+for _, spec in ipairs(W.specs) do if #(W.macros[spec] or {}) > 0 then wantHeaders = wantHeaders + 1 end end
+if #(W.macros[ns.UTILITY] or {}) > 0 then wantHeaders = wantHeaders + 1 end
+local seen, sawMacros, headerLast, firstMacroLine = {}, 0, false, nil
+local pageCount = visit(function(n)
+  local rs = T.rows()
+  T.check(#rs <= 9, "page " .. n .. " has at most 9 rows")
+  T.check(rs[1].entry.kind == "header", "page " .. n .. " opens with a header row")
+  if rs[#rs].entry.kind == "header" then headerLast = true end
+  for _, f in ipairs(rs) do
+    if f.entry.kind == "header" then if not f.entry.label:find("continued", 1, true) then seen[f.entry.label] = true end
+    else sawMacros = sawMacros + 1 end
+  end
+end)
+local wantMacros = 0
+for _, spec in ipairs(W.specs) do wantMacros = wantMacros + #(W.macros[spec] or {}) end
+wantMacros = wantMacros + #(W.macros[ns.UTILITY] or {})
+T.eq(sawMacros, wantMacros, "every Warrior macro appears exactly once across the pages")
+local nSeen = 0; for _ in pairs(seen) do nSeen = nSeen + 1 end
+T.eq(nSeen, wantHeaders, "one header per spec section")
+T.check(seen["All specs"], "Utility macros sit under an \"All specs\" header")
+T.check(not headerLast, "a header never ends a page")
+T.check(pageCount > 1, "Warrior needs more than one page")
+-- the page for the detected spec opens first (spec detection returns nothing in the mock, so first page)
+
+-- Spec detection opens the class on the page that holds your spec
+local lastSpecName = W.specs[#W.specs]
+T.spec = #W.specs
+T.fire("PLAYER_LOGIN")
+local onPage = false
+for _, f in ipairs(T.rows()) do if f.entry.kind == "header" and f.entry.spec == lastSpecName then onPage = true end end
+T.check(onPage, "login opens the page with your detected spec (" .. lastSpecName .. ")")
+T.spec = nil
+local wiX = T.icon("WARRIOR"); wiX._scripts.OnClick(wiX)
+T.check(T.rows()[1].entry.label ~= nil and T.rows()[1].entry.kind == "header", "choosing the class icon shows its first page")
+-- a long section continues onto the next page with a (continued) header
+local cont = false
+visit(function() for _, f in ipairs(T.rows()) do if f.entry.kind == "header" and f.entry.label:find("continued", 1, true) then cont = true end end end)
+T.check(cont, "a section that spans pages repeats its header as (continued)")
 
 -- Adding a macro creates it in the character tab, once
-T.press("Prev")
-T.click("MO Charge")
+local function findAndClick(name)
+  local found
+  visit(function() for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and f.entry.macro.name == name and not found then found = true; f._scripts.OnClick(f) end end end)
+  T.check(found, name .. " found in the list")
+end
+local function goTo(name)
+  local n = 1
+  goToPage(1)
+  while true do
+    for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and f.entry.macro.name == name then return f end end
+    local b = T.button("Next"); if not b._enabled then return nil end
+    b._scripts.OnClick(b)
+  end
+end
+local mo = goTo("MO Charge"); T.check(mo, "MO Charge is listed"); mo._scripts.OnClick(mo)
 T.check(GetMacroIndexByName("MO Charge") > 120, "MO Charge created as a character macro")
-T.click("MO Charge")
+mo = goTo("MO Charge"); mo._scripts.OnClick(mo)
 T.check(T.lastPrint():find("already exists", 1, true), "second click is refused")
 
 -- My Macros: import, save, reuse on another class, remove
@@ -110,9 +176,9 @@ local savedPretty
 for _, sv in ipairs(ns.GetSaved()) do if sv.name == "Pretty" then savedPretty = sv end end
 T.check(savedPretty and savedPretty.icon ~= nil, "chosen icon is saved with the macro")
 T.eq(select(2, GetMacroInfo(GetMacroIndexByName("Pretty"))), savedPretty.icon, "macro created on the character uses the chosen icon")
-local wi2 = T.icon("WARRIOR"); wi2._scripts.OnClick(wi2); T.press("All specs")
+local wi2 = T.icon("WARRIOR"); wi2._scripts.OnClick(wi2)
 T.macros = {}
-T.click("MO Charge")
+local mo2 = goTo("MO Charge"); mo2._scripts.OnClick(mo2)
 T.eq(select(2, GetMacroInfo(GetMacroIndexByName("MO Charge"))), 5100, "ready-made macro is created with its spell's icon")
 
 -- Spell icon cache: a spell learned on one character shows its icon for one that hasn't learned it
@@ -148,8 +214,7 @@ ns.playerClass = "WARRIOR"; T.macros = {}
 T.press("Game macro window")
 T.check(T.macroFrameOpened, "button opens the game macro window")
 local wi = T.icon("WARRIOR"); wi._scripts.OnClick(wi)
-T.press("All specs")
-local row = T.rows()[1]
+local row = visible("macro")[1]
 local first = T.rowName(row)
 T.check(GetMacroIndexByName(first) == 0, "macro not on character before drag")
 row._scripts.OnDragStart(row)
