@@ -3,7 +3,7 @@
 ## Title: Ready Macros
 ## Notes: One-click character-specific macros by class and spec
 ## Author: Anthony
-## Version: 0.8.2
+## Version: 0.9.0
 ## SavedVariables: ReadyMacrosDB
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
