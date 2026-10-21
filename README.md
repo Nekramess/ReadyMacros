@@ -37,6 +37,10 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - **Saved:** your saved macros, available on every character on your account. Click to add one to the current character. Alt-click to edit. Shift-click to remove it from the list.
 - **Weapon swap:** equip a weapon set and click Capture. Do this for two sets, for example one-hand and shield, then two-hand. Ready Macros reads the item names from your equipped gear and creates a macro for each set. Recapture and click again to update a macro after you change weapons.
 
+## Macro window and action bars
+- **Game macro window** button (bottom right) opens the game's own macro window.
+- **Drag any macro row onto an action bar.** If your character doesn't have the macro yet, Ready Macros adds it first, then picks it up so you can drop it on a slot.
+
 ## How to use
 - Type `/rmac` or `/readymacros` to open or close the window.
 - Pick a class and a spec tab, then click a macro to add it.
@@ -47,5 +51,5 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells and three Paladin spells (Purify, Blessing of Protection, Blessing of Freedom).
 - Spec detection is a best guess and may open the wrong spec tab.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
-- The spell ID report (`/rmac ids`), My Macros (including the New macro editor), weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
+- The spell ID report (`/rmac ids`), My Macros (including the New macro editor), the Game macro window button, dragging rows to action bars, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
 - The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. Confirmed in the live client on 20 Oct 2026: with Leatrix Plus' "Enhance minimap" on, the old button was replaced and labelled a custom button, the new one is not (author's test).

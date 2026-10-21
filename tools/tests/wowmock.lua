@@ -75,6 +75,8 @@ function M.install(opts)
   end
   InCombatLockdown = function() return false end
   IsShiftKeyDown = function() return M.shift end
+  PickupMacro = function(i) M.picked = i end
+  ShowMacroFrame = function() M.macroFrameOpened = true end
   IsAltKeyDown = function() return M.alt end
   local class = opts.class or "WARRIOR"
   UnitClass = function() return class, class end

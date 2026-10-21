@@ -194,6 +194,20 @@ nextBtn:SetPoint("RIGHT")
 nextBtn:SetText("Next")
 local pageText = pager:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 pageText:SetPoint("CENTER")
+-- Opens the game's own macro window (ShowMacroFrame, Blizzard_MacroUI_Bootstrap.lua in the Forever UI source).
+local macroWinBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+macroWinBtn:SetSize(130, 22)
+macroWinBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 34)
+macroWinBtn:SetText("Game macro window")
+macroWinBtn:SetScript("OnClick", function()
+  if type(ShowMacroFrame) == "function" then
+    local ok = pcall(ShowMacroFrame)
+    if not ok then Print("Couldn't open the game's macro window. Try /macro.") end
+  else
+    Print("Couldn't open the game's macro window. Try /macro.")
+  end
+end)
+
 prevBtn:SetScript("OnClick", function() page = page - 1; Refresh() end)
 nextBtn:SetScript("OnClick", function() page = page + 1; Refresh() end)
 
@@ -259,6 +273,21 @@ local function GetRow(i)
     end
     Refresh()
   end)
+  -- Drag a macro row onto an action bar: adds the macro first if this character doesn't have it,
+  -- then picks it up (PickupMacro, as the game's macro window does).
+  r:RegisterForDrag("LeftButton")
+  r:SetScript("OnDragStart", function(self)
+    local e = self.entry
+    if not e or e.kind ~= "macro" then return end
+    if InCombatLockdown() then Print("Can't pick up macros in combat."); return end
+    local idx = GetMacroIndexByName(e.macro.name)
+    if idx == 0 then
+      AddMacro(e.macro, e.checkClass, false)
+      idx = GetMacroIndexByName(e.macro.name)
+      Refresh()
+    end
+    if idx ~= 0 and PickupMacro then PickupMacro(idx) end
+  end)
   r:SetScript("OnEnter", function(self)
     local e = self.entry
     if not e then return end
@@ -267,6 +296,8 @@ local function GetRow(i)
       GameTooltip:AddLine(e.macro.name, 1, 1, 1)
       GameTooltip:AddLine(e.macro.body, 0.8, 0.8, 0.8, true)
       AddCheckLines(e.macro, e.checkClass)
+      GameTooltip:AddLine(" ")
+      GameTooltip:AddLine("Drag onto an action bar to add it and place it in one step.", 0.6, 0.8, 1, true)
     else
       GameTooltip:AddLine(e.label, 1, 1, 1)
       if e.body then GameTooltip:AddLine(e.body, 0.8, 0.8, 0.8, true) end

@@ -73,8 +73,28 @@ T.macros = {}; ns.playerClass = "MAGE"
 T.press("Saved"); T.click("My Taunt")
 T.check(GetMacroIndexByName("My Taunt") > 120, "typed macro added on another character")
 
+-- Game macro window button and drag-to-action-bar
+ns.playerClass = "WARRIOR"; T.macros = {}
+T.press("Game macro window")
+T.check(T.macroFrameOpened, "button opens the game macro window")
+local wi = T.icon("WARRIOR"); wi._scripts.OnClick(wi)
+T.press("All specs")
+local row = T.rows()[1]
+local first = T.rowName(row)
+T.check(GetMacroIndexByName(first) == 0, "macro not on character before drag")
+row._scripts.OnDragStart(row)
+local idx = GetMacroIndexByName(first)
+T.check(idx > 120, "drag adds a missing macro")
+T.eq(T.picked, idx, "drag picks the macro up")
+T.picked = nil
+row._scripts.OnDragStart(row)
+T.eq(T.picked, idx, "drag of an existing macro just picks it up")
+local before = select(2, GetNumMacros())
+T.eq(select(2, GetNumMacros()), before, "no duplicate created on second drag")
+
 -- Weapon swap: capture, build, recapture, update
 ns.playerClass = "WARRIOR"
+local si = T.icon("SAVED"); si._scripts.OnClick(si)
 T.press("Weapon swap")
 T.click("Capture Set 1")
 T.equipped = { [16] = T.itemLink("Obsidian Edged Blade") }
