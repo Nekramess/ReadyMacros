@@ -50,6 +50,10 @@ for _, f in ipairs(T.frames) do
   if f._kind == "EditBox" then if not nameBox then nameBox = f elseif not bodyBox then bodyBox = f end end
 end
 T.check(nameBox and bodyBox, "editor has a name box and a text box")
+local area = bodyBox._parent
+T.check(area and area._scripts.OnClick, "text box sits in a clickable area")
+area._scripts.OnClick(area)
+T.check(T.focused == bodyBox, "clicking the box area focuses the text box")
 nameBox:SetText(""); bodyBox:SetText("/say hi"); T.press("Save macro")
 T.check(T.lastPrint():find("Give the macro a name", 1, true), "empty name refused")
 nameBox:SetText("My Taunt"); bodyBox:SetText(""); T.press("Save macro")

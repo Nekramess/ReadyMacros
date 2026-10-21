@@ -18,6 +18,7 @@ local function newObj(kind)
       IsShown = function(self) return self._shown end,
       SetText = function(self, v) self._text = v end,
       GetText = function(self) return self._text end,
+      SetFocus = function(self) M.focused = self end,
       Enable = function(self) self._enabled = true end,
       Disable = function(self) self._enabled = false end,
       CreateFontString = function() return newObj("FontString") end,
