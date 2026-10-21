@@ -96,8 +96,8 @@ function M.install(opts)
   GetInventoryItemLink = function(_, slot) return M.equipped[slot] end
   GetInventoryItemTexture = function(_, slot) return 9000 + slot end
   C_Spell = { GetSpellInfo = function(x)
-    if type(x) == "number" then local n = M.ids[x]; return n and { name = n, spellID = x } or nil end
-    local id = M.known[x]; return id and { name = x, spellID = id } or nil
+    if type(x) == "number" then local n = M.ids[x]; return n and { name = n, spellID = x, iconID = 5000 + x } or nil end
+    local id = M.known[x]; return id and { name = x, spellID = id, iconID = 5000 + id } or nil
   end }
   IsPlayerSpell = function(id) local n = M.ids[id]; return n ~= nil and M.known[n] ~= nil end
   -- Forever's real namespaces (Blizzard_APIDocumentationGenerated: SpellBookDocumentation, SpecializationInfoDocumentation)

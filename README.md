@@ -38,6 +38,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - **Weapon swap:** equip a weapon set and click Capture. Do this for two sets, for example one-hand and shield, then two-hand. Ready Macros reads the item names from your equipped gear and creates a macro for each set. Recapture and click again to update a macro after you change weapons.
 
 ## Macro window and action bars
+- Rows show the macro's icon, and the New macro editor is laid out like the game's macro window.
 - **Game macro window** button (bottom right) opens the game's own macro window.
 - **Drag any macro row onto an action bar.** If your character doesn't have the macro yet, Ready Macros adds it first, then picks it up so you can drop it on a slot.
 

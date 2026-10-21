@@ -77,6 +77,23 @@ T.macros = {}; ns.playerClass = "MAGE"
 T.press("Saved"); T.click("My Taunt")
 T.check(GetMacroIndexByName("My Taunt") > 120, "typed macro added on another character")
 
+-- Macro icons and editor delete/cancel
+T.eq(ns.MacroIcon({ body = "#showtooltip Charge\n/cast Charge" }), 5100, "icon from #showtooltip spell")
+T.eq(ns.MacroIcon({ body = "/cast [@mouseover,help][] Heroic Strike" }), 5078, "icon from first /cast spell")
+T.eq(ns.MacroIcon({ body = "/say hi" }), 134400, "no spell gives the default icon")
+T.eq(ns.MacroIcon({ body = "/say hi", icon = 777 }), 777, "saved icon wins")
+local si2 = T.icon("SAVED"); si2._scripts.OnClick(si2)
+T.press("Saved")
+local nSaved = #ns.GetSaved()
+T.alt = true; T.click("Quick"); T.alt = false
+T.press("Cancel")
+T.eq(nameBox:GetText(), "", "cancel clears the editor")
+T.eq(#ns.GetSaved(), nSaved, "cancel saves nothing")
+T.press("Saved")
+T.alt = true; T.click("Quick"); T.alt = false
+T.press("Delete")
+T.eq(#ns.GetSaved(), nSaved - 1, "delete removes the edited saved macro")
+
 -- Game macro window button and drag-to-action-bar
 ns.playerClass = "WARRIOR"; T.macros = {}
 T.press("Game macro window")

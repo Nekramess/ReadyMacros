@@ -240,6 +240,25 @@ local function AddCheckLines(m, checkClass)
 end
 
 ---------------------------------------------------------------------------
+-- Macro icon: the saved icon, else the icon of the spell named in #showtooltip or the first /cast
+---------------------------------------------------------------------------
+function ns.MacroIcon(m)
+  if m.icon and m.icon ~= ICON then return m.icon end
+  local body = m.body or ""
+  local spell = body:match("#showtooltip%s+([^\n]+)")
+  if not spell then
+    local line = body:match("/cast%s+([^\n]+)") or body:match("/use%s+([^\n]+)")
+    if line then spell = line:gsub("%b[]", ""):match("^%s*([^;]-)%s*$") end
+  end
+  if spell then
+    spell = spell:match("^%s*(.-)%s*$")
+    local ok, info = pcall(C_Spell.GetSpellInfo, spell)
+    if ok and type(info) == "table" and info.iconID then return info.iconID end
+  end
+  return ICON
+end
+
+---------------------------------------------------------------------------
 -- Rows
 ---------------------------------------------------------------------------
 local rows = {}
@@ -252,8 +271,11 @@ local function GetRow(i)
   r:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -140 - (i - 1) * (ROW_HEIGHT + 2))
   r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
 
+  r.icon = r:CreateTexture(nil, "ARTWORK")
+  r.icon:SetSize(30, 30)
+  r.icon:SetPoint("LEFT", r, "LEFT", 4, 0)
   r.name = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  r.name:SetPoint("TOPLEFT", 6, -4)
+  r.name:SetPoint("TOPLEFT", 42, -4)
   r.desc = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   r.desc:SetPoint("TOPLEFT", r.name, "BOTTOMLEFT", 0, -2)
   r.desc:SetPoint("RIGHT", r, "RIGHT", -170, 0)
@@ -316,6 +338,8 @@ end
 
 local function RenderMacroRow(r, e)
   local m = e.macro
+  r.icon:SetTexture(ns.MacroIcon(m))
+  r.icon:Show()
   r.name:SetText(m.name)
   r.desc:SetText(m.desc or "")
   local st, details = ns.CheckMacro(m, e.checkClass)
@@ -349,6 +373,7 @@ local function RenderMacroRow(r, e)
 end
 
 local function RenderActionRow(r, e)
+  r.icon:Hide()
   r.name:SetText(e.label)
   r.desc:SetText(e.desc or "")
   r.state:SetText(e.state or "")
@@ -458,7 +483,9 @@ local function WeaponEntries()
 end
 
 ---------------------------------------------------------------------------
--- Editor: type a macro, save it to My Macros (account-wide), add it on any character
+-- Editor: type a macro, save it to My Macros (account-wide), add it on any character.
+-- Laid out like the game's own macro window (icon + name, "Enter Macro Commands:", character
+-- counter, Save / Cancel / Delete) so it feels familiar. It does not replace that window.
 ---------------------------------------------------------------------------
 local editor = CreateFrame("Frame", nil, frame)
 editor:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -110)
@@ -466,31 +493,35 @@ editor:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 36)
 editor:Hide()
 local editingIndex
 
-local nameLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-nameLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -34)
-nameLabel:SetText("Name (max 16)")
+local previewIcon = editor:CreateTexture(nil, "ARTWORK")
+previewIcon:SetSize(36, 36)
+previewIcon:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -6)
+previewIcon:SetTexture(ICON)
+
+local nameLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+nameLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 52, -2)
+nameLabel:SetText("Macro name (max 16)")
 local nameBox = CreateFrame("EditBox", nil, editor, "InputBoxTemplate")
-nameBox:SetSize(200, 22)
-nameBox:SetPoint("TOPLEFT", editor, "TOPLEFT", 110, -30)
+nameBox:SetSize(220, 22)
+nameBox:SetPoint("TOPLEFT", editor, "TOPLEFT", 58, -18)
 nameBox:SetAutoFocus(false)
 nameBox:SetMaxLetters(16)
 nameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 
-local bodyLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-bodyLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -66)
-bodyLabel:SetText("Macro text")
-local counter = editor:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-counter:SetPoint("TOPRIGHT", editor, "TOPRIGHT", -4, -68)
+local bodyLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+bodyLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -54)
+bodyLabel:SetText("Enter Macro Commands:")
+
 -- A visible, clickable box: clicking anywhere in it puts the cursor in the text.
 local bodyArea = CreateFrame("Button", nil, editor)
 bodyArea:SetSize(512, 170)
-bodyArea:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -88)
+bodyArea:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -72)
 local areaBg = bodyArea:CreateTexture(nil, "BACKGROUND")
 areaBg:SetAllPoints(bodyArea)
-areaBg:SetColorTexture(0.02, 0.02, 0.02, 0.9)
+areaBg:SetColorTexture(0.05, 0.05, 0.12, 0.95)
 local function Edge(p1, p2, w, h)
   local t = bodyArea:CreateTexture(nil, "BORDER")
-  t:SetColorTexture(1, 0.82, 0, 0.7)
+  t:SetColorTexture(0.6, 0.6, 0.6, 0.8)
   t:SetPoint(p1, bodyArea, p1, 0, 0)
   t:SetPoint(p2, bodyArea, p2, 0, 0)
   if w then t:SetWidth(w) end
@@ -509,22 +540,29 @@ bodyBox:SetPoint("BOTTOMRIGHT", bodyArea, "BOTTOMRIGHT", -8, 8)
 bodyBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 bodyArea:SetScript("OnClick", function() bodyBox:SetFocus() end)
 
+local counter = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+counter:SetPoint("TOP", bodyArea, "BOTTOM", 0, -4)
+
 local function UpdateCounter()
-  local n = #(bodyBox:GetText() or "")
-  counter:SetText(n .. " / 255")
-  if n >= 255 then counter:SetTextColor(1, 0.3, 0.3) else counter:SetTextColor(0.6, 0.6, 0.6) end
+  local text = bodyBox:GetText() or ""
+  local n = #text
+  counter:SetText(n .. "/255 Characters Used")
+  if n >= 255 then counter:SetTextColor(1, 0.3, 0.3) else counter:SetTextColor(1, 1, 1) end
+  previewIcon:SetTexture(ns.MacroIcon({ body = text }))
 end
 bodyBox:SetScript("OnTextChanged", UpdateCounter)
 
 local editorNote = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-editorNote:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -270)
+editorNote:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -274)
 editorNote:SetWidth(520)
 editorNote:SetJustifyH("LEFT")
 
+local deleteBtn
 local function EditorClear()
   editingIndex = nil
   nameBox:SetText(""); bodyBox:SetText("")
   UpdateCounter()
+  if deleteBtn then deleteBtn:Disable() end
   editorNote:SetText("Save to list: keeps it for all your characters. Save and add here: also creates it on this character now.")
 end
 
@@ -535,6 +573,7 @@ function ns.EditSaved(index)
   nameBox:SetText(s.name); bodyBox:SetText(s.body)
   editingIndex = index
   UpdateCounter()
+  if deleteBtn then deleteBtn:Enable() end
   editorNote:SetText("Editing \"" .. s.name .. "\". Save replaces it in your saved macros (characters that already added it keep their copy).")
   page = 1
   Refresh()
@@ -549,14 +588,6 @@ local function EditorSave(addHere)
   Refresh()
 end
 
-local saveBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
-saveBtn:SetSize(120, 24); saveBtn:SetPoint("BOTTOMLEFT", editor, "BOTTOMLEFT", 4, 4)
-saveBtn:SetText("Save to list")
-saveBtn:SetScript("OnClick", function() EditorSave(false) end)
-local saveAddBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
-saveAddBtn:SetSize(150, 24); saveAddBtn:SetPoint("LEFT", saveBtn, "RIGHT", 6, 0)
-saveAddBtn:SetText("Save and add here")
-saveAddBtn:SetScript("OnClick", function() EditorSave(true) end)
 local function Tip(btn, text)
   btn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -565,12 +596,33 @@ local function Tip(btn, text)
   end)
   btn:SetScript("OnLeave", GameTooltip_Hide)
 end
+
+local function EditorButton(label, width, anchorTo, handler)
+  local b = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+  b:SetSize(width, 24)
+  if anchorTo then b:SetPoint("LEFT", anchorTo, "RIGHT", 6, 0)
+  else b:SetPoint("BOTTOMLEFT", editor, "BOTTOMLEFT", 4, 4) end
+  b:SetText(label)
+  b:SetScript("OnClick", handler)
+  return b
+end
+
+local saveBtn = EditorButton("Save to list", 100, nil, function() EditorSave(false) end)
+local saveAddBtn = EditorButton("Save and add here", 130, saveBtn, function() EditorSave(true) end)
+local cancelBtn = EditorButton("Cancel", 60, saveAddBtn, function() EditorClear(); Refresh() end)
+deleteBtn = EditorButton("Delete", 60, cancelBtn, function()
+  if editingIndex then
+    local s = ns.GetSaved()[editingIndex]
+    ns.RemoveSaved(editingIndex)
+    Print("Removed \"" .. (s and s.name or "macro") .. "\" from your saved macros.")
+  end
+  EditorClear()
+  Refresh()
+end)
 Tip(saveBtn, "Saves the macro to your list (Saved tab), shared by all your characters. Nothing is created on this character yet.")
 Tip(saveAddBtn, "Saves it to your list AND creates it on this character, so it appears in the game's macro window.")
-local clearBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
-clearBtn:SetSize(80, 24); clearBtn:SetPoint("LEFT", saveAddBtn, "RIGHT", 6, 0)
-clearBtn:SetText("Clear")
-clearBtn:SetScript("OnClick", function() EditorClear(); Refresh() end)
+Tip(cancelBtn, "Clears the editor without saving.")
+Tip(deleteBtn, "Removes the macro you are editing from your saved list.")
 EditorClear()
 
 local function ClassEntries(data)
