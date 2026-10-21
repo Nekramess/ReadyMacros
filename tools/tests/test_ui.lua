@@ -42,6 +42,37 @@ T.check(GetMacroIndexByName("Tank Mode") > 120, "saved macro added on another ch
 T.shift = true; T.click("Hearth"); T.shift = false
 T.eq(#T.rows(), 1, "shift-click removes a saved macro")
 
+-- Editor: type a macro, save it, edit it, add it on another character
+ns.playerClass = "WARRIOR"; T.macros = {}
+T.press("New macro")
+local nameBox, bodyBox
+for _, f in ipairs(T.frames) do
+  if f._kind == "EditBox" then if not nameBox then nameBox = f elseif not bodyBox then bodyBox = f end end
+end
+T.check(nameBox and bodyBox, "editor has a name box and a text box")
+nameBox:SetText(""); bodyBox:SetText("/say hi"); T.press("Save macro")
+T.check(T.lastPrint():find("Give the macro a name", 1, true), "empty name refused")
+nameBox:SetText("My Taunt"); bodyBox:SetText(""); T.press("Save macro")
+T.check(T.lastPrint():find("empty", 1, true), "empty text refused")
+bodyBox:SetText(("x"):rep(256)); T.press("Save macro")
+T.check(T.lastPrint():find("255", 1, true), "text over 255 refused")
+bodyBox:SetText("#showtooltip\n/cast Taunt"); T.press("Save macro")
+T.check(T.lastPrint():find('Saved "My Taunt"', 1, true), "typed macro saved")
+T.eq(nameBox:GetText(), "", "editor clears after save")
+nameBox:SetText("My Taunt"); bodyBox:SetText("/say other"); T.press("Save macro")
+T.check(T.lastPrint():find("already have", 1, true), "duplicate name refused")
+nameBox:SetText("Quick"); bodyBox:SetText("/say quick"); T.press("Save and add here")
+T.check(GetMacroIndexByName("Quick") > 120, "save and add creates the macro here")
+T.press("Saved")
+T.alt = true; T.click("My Taunt"); T.alt = false
+T.eq(nameBox:GetText(), "My Taunt", "alt-click loads macro into editor")
+bodyBox:SetText("/cast Taunt"); T.press("Save macro")
+T.eq(ns.GetSaved()[#ns.GetSaved() - 1].body, "/cast Taunt", "edit replaces the text")
+T.eq(#ns.GetSaved(), 3, "edit does not add a copy (Tank Mode, My Taunt, Quick)")
+T.macros = {}; ns.playerClass = "MAGE"
+T.press("Saved"); T.click("My Taunt")
+T.check(GetMacroIndexByName("My Taunt") > 120, "typed macro added on another character")
+
 -- Weapon swap: capture, build, recapture, update
 ns.playerClass = "WARRIOR"
 T.press("Weapon swap")

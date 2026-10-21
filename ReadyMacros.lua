@@ -9,7 +9,7 @@ local PREFIX = "|cff33ccffReady Macros:|r "
 local MAX_ROWS = 8
 
 local SAVED = "SAVED" -- the "My Macros" view
-local SAVED_TABS = { "Saved", "Import", "Weapon swap" }
+local SAVED_TABS = { "Saved", "New macro", "Import", "Weapon swap" }
 
 local VIEW_ORDER = {}
 for _, key in ipairs(ns.CLASS_ORDER) do VIEW_ORDER[#VIEW_ORDER + 1] = key end
@@ -252,7 +252,8 @@ local function GetRow(i)
     local e = self.entry
     if not e then return end
     if e.kind == "macro" then
-      if IsShiftKeyDown() and e.onShift then e.onShift() else AddMacro(e.macro, e.checkClass, e.allowUpdate) end
+      if IsAltKeyDown and IsAltKeyDown() and e.onAlt then e.onAlt(); return
+      elseif IsShiftKeyDown() and e.onShift then e.onShift() else AddMacro(e.macro, e.checkClass, e.allowUpdate) end
     elseif e.onClick then
       e.onClick()
     end
@@ -346,7 +347,8 @@ local function SavedEntries()
         ns.RemoveSaved(i)
         Print("Removed \"" .. s.name .. "\" from your saved macros.")
       end,
-      tip = { "Click to add to this character. Shift-click to remove it from your saved macros." },
+      onAlt = function() ns.EditSaved(i) end,
+      tip = { "Click to add to this character. Alt-click to edit it. Shift-click to remove it from your saved macros." },
     }
   end
   if #entries == 0 then
@@ -424,6 +426,93 @@ local function WeaponEntries()
   return entries
 end
 
+---------------------------------------------------------------------------
+-- Editor: type a macro, save it to My Macros (account-wide), add it on any character
+---------------------------------------------------------------------------
+local editor = CreateFrame("Frame", nil, frame)
+editor:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -110)
+editor:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 36)
+editor:Hide()
+local editingIndex
+
+local nameLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+nameLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -34)
+nameLabel:SetText("Name (max 16)")
+local nameBox = CreateFrame("EditBox", nil, editor, "InputBoxTemplate")
+nameBox:SetSize(200, 22)
+nameBox:SetPoint("TOPLEFT", editor, "TOPLEFT", 110, -30)
+nameBox:SetAutoFocus(false)
+nameBox:SetMaxLetters(16)
+nameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+local bodyLabel = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+bodyLabel:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -66)
+bodyLabel:SetText("Macro text")
+local counter = editor:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+counter:SetPoint("TOPRIGHT", editor, "TOPRIGHT", -4, -68)
+local bodyBox = CreateFrame("EditBox", nil, editor)
+bodyBox:SetMultiLine(true)
+bodyBox:SetAutoFocus(false)
+bodyBox:SetFontObject(ChatFontNormal)
+bodyBox:SetMaxLetters(255)
+bodyBox:SetSize(500, 170)
+bodyBox:SetPoint("TOPLEFT", editor, "TOPLEFT", 8, -90)
+bodyBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+local function UpdateCounter()
+  local n = #(bodyBox:GetText() or "")
+  counter:SetText(n .. " / 255")
+  if n >= 255 then counter:SetTextColor(1, 0.3, 0.3) else counter:SetTextColor(0.6, 0.6, 0.6) end
+end
+bodyBox:SetScript("OnTextChanged", UpdateCounter)
+
+local editorNote = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+editorNote:SetPoint("TOPLEFT", editor, "TOPLEFT", 4, -270)
+editorNote:SetWidth(520)
+editorNote:SetJustifyH("LEFT")
+
+local function EditorClear()
+  editingIndex = nil
+  nameBox:SetText(""); bodyBox:SetText("")
+  UpdateCounter()
+  editorNote:SetText("Type a name and the macro text, then Save. Saved macros appear under Saved on every character.")
+end
+
+function ns.EditSaved(index)
+  local s = ns.GetSaved()[index]
+  if not s then return end
+  selectedSpec = "New macro"
+  nameBox:SetText(s.name); bodyBox:SetText(s.body)
+  editingIndex = index
+  UpdateCounter()
+  editorNote:SetText("Editing \"" .. s.name .. "\". Save replaces it in your saved macros (characters that already added it keep their copy).")
+  page = 1
+  Refresh()
+end
+
+local function EditorSave(addHere)
+  local ok, res = ns.SaveCustom(nameBox:GetText(), bodyBox:GetText(), ns.playerClass, editingIndex)
+  if not ok then Print(res); return end
+  Print("Saved \"" .. res .. "\". It's now in My Macros > Saved on every character.")
+  if addHere then AddMacro({ name = res, body = bodyBox:GetText():gsub("\r", "") }, nil, false) end
+  EditorClear()
+  Refresh()
+end
+
+local saveBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+saveBtn:SetSize(120, 24); saveBtn:SetPoint("BOTTOMLEFT", editor, "BOTTOMLEFT", 4, 4)
+saveBtn:SetText("Save macro")
+saveBtn:SetScript("OnClick", function() EditorSave(false) end)
+local saveAddBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+saveAddBtn:SetSize(150, 24); saveAddBtn:SetPoint("LEFT", saveBtn, "RIGHT", 6, 0)
+saveAddBtn:SetText("Save and add here")
+saveAddBtn:SetScript("OnClick", function() EditorSave(true) end)
+local clearBtn = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+clearBtn:SetSize(80, 24); clearBtn:SetPoint("LEFT", saveAddBtn, "RIGHT", 6, 0)
+clearBtn:SetText("Clear")
+clearBtn:SetScript("OnClick", function() EditorClear(); Refresh() end)
+EditorClear()
+
 local function ClassEntries(data)
   local entries = {}
   for _, m in ipairs(data.macros[selectedSpec] or data.macros[ns.UTILITY] or {}) do
@@ -472,11 +561,14 @@ function Refresh()
 
   -- entries
   local entries
-  if isSaved then
+  local showEditor = isSaved and selectedSpec == "New macro"
+  editor:SetShown(showEditor)
+  if showEditor then entries = {}
+  elseif isSaved then
     if selectedSpec == "Import" then entries = ImportEntries()
     elseif selectedSpec == "Weapon swap" then entries = WeaponEntries()
     else entries = SavedEntries() end
-    hint:SetText(selectedSpec == "Saved" and "Shift-click a saved macro to remove it." or "")
+    hint:SetText(selectedSpec == "Saved" and "Alt-click edits, shift-click removes." or "")
   else
     entries = ClassEntries(data)
     hint:SetText("Green = known. Grey = learn later. Orange = check it.")
@@ -485,7 +577,7 @@ function Refresh()
   -- paging
   local pages = math.max(1, math.ceil(#entries / MAX_ROWS))
   page = math.min(math.max(page, 1), pages)
-  pager:SetShown(pages > 1)
+  pager:SetShown(pages > 1 and not showEditor)
   pageText:SetText(("Page %d / %d"):format(page, pages))
   if page > 1 then prevBtn:Enable() else prevBtn:Disable() end
   if page < pages then nextBtn:Enable() else nextBtn:Disable() end

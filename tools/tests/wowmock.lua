@@ -1,7 +1,7 @@
 -- Minimal stand-in for the WoW client API, enough to load Ready Macros outside the game.
 -- It is NOT the real client: frames only record text, scripts and visibility. Passing tests
 -- prove the addon's own logic, not how the game renders or behaves.
-local M = { frames = {}, printed = {}, macros = {}, equipped = {}, known = {}, ids = {}, shift = false }
+local M = { frames = {}, printed = {}, macros = {}, equipped = {}, known = {}, ids = {}, shift = false, alt = false }
 
 local function newObj(kind)
   local o = { _kind = kind, _shown = true, _scripts = {}, _text = "", _enabled = true }
@@ -75,6 +75,7 @@ function M.install(opts)
   end
   InCombatLockdown = function() return false end
   IsShiftKeyDown = function() return M.shift end
+  IsAltKeyDown = function() return M.alt end
   local class = opts.class or "WARRIOR"
   UnitClass = function() return class, class end
   UnitName = function() return "Tester" end
