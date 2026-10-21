@@ -8,7 +8,7 @@ local function newObj(kind)
   return setmetatable(o, { __index = function(_, k)
     -- Plain data fields the addon reads must be nil until set (unknown keys otherwise
     -- return a no-op method, which is truthy).
-    if k == "dragging" then return nil end
+    if k == "dragging" or k == "showOnMouseover" or k == "isMouseDown" or k == "dataObject" or k == "db" or k == "loggedIn" then return nil end
     local methods = {
       SetScript = function(self, n, f) self._scripts[n] = f end,
       GetScript = function(self, n) return self._scripts[n] end,
@@ -21,7 +21,10 @@ local function newObj(kind)
       Enable = function(self) self._enabled = true end,
       Disable = function(self) self._enabled = false end,
       CreateFontString = function() return newObj("FontString") end,
-      CreateTexture = function() return newObj("Texture") end,
+      CreateTexture = function(self) local t = newObj("Texture"); t._parent = self; return t end,
+      GetParent = function(self) return self._parent end,
+      CreateAnimationGroup = function() return newObj("AnimationGroup") end,
+      CreateAnimation = function() return newObj("Animation") end,
       GetFontString = function() return newObj("FontString") end,
       -- Anchors are only recorded (lastPoint = { point, relativeTo, relativePoint, x, y }).
       ClearAllPoints = function(self) self.lastPoint = nil end,
@@ -40,8 +43,10 @@ function M.install(opts)
   M.known = opts.known or {}
   M.ids = opts.ids or {}
   for name, id in pairs(M.known) do M.ids[id] = name end
-  CreateFrame = function(kind, name)
+  LibStub = nil                                     -- libraries re-register against each fresh client
+  CreateFrame = function(kind, name, parent)
     local f = newObj(kind); M.frames[#M.frames + 1] = f
+    f._parent, f._name = parent, name
     if type(name) == "string" then _G[name] = f end   -- named frames become globals, as in the client
     return f
   end
@@ -102,7 +107,7 @@ end
 function M.tocFiles()
   local files = {}
   for line in io.lines("ReadyMacros.toc") do
-    line = line:gsub("\r", ""):match("^%s*(.-)%s*$")
+    line = line:gsub("\r", ""):match("^%s*(.-)%s*$"):gsub("\\", "/")   -- .toc paths may use backslashes
     if line ~= "" and not line:match("^#") then files[#files + 1] = line end
   end
   return files

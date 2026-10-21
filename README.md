@@ -6,7 +6,7 @@ One-click, character-specific macros for World of Warcraft: Forever, sorted by c
 Copy this folder into `Interface/AddOns/ReadyMacros`, then restart the game or `/reload`.
 
 ## Commands
-- `/rmac` or `/readymacros` open or close the window, `/rmac ids` spell ID report for your class, `/rmac minimap on|off|square|round|auto` minimap button
+- `/rmac` or `/readymacros` open or close the window, `/rmac ids` spell ID report for your class, `/rmac minimap on|off` shows or hides the minimap button
 
 ## What it does
 Ready Macros gives you a list of ready-made macros for every class and spec. Click a macro and it is created in your character-specific macro tab. You do not type anything or open the macro editor. Ready Macros also checks each macro's spells against your own spellbook, saves your own macros so you can add them on your other characters, and builds weapon swap macros from the weapons you have equipped.
@@ -47,3 +47,4 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - Spec detection is a best guess and may open the wrong spec tab.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
 - The spell ID report (`/rmac ids`), My Macros, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
+- The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. Confirmed in the live client on 20 Oct 2026: with Leatrix Plus' "Enhance minimap" on, the old button was replaced and labelled a custom button, the new one is not (author's test).

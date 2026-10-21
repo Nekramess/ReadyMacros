@@ -1,9 +1,14 @@
 ## Interface: 16001
+## IconTexture: Interface\Icons\INV_Misc_Note_01
 ## Title: Ready Macros
 ## Notes: One-click character-specific macros by class and spec
 ## Author: Anthony
-## Version: 0.8.1
+## Version: 0.8.2
 ## SavedVariables: ReadyMacrosDB
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Data.lua
 SpellIDs.lua
 Verify.lua
