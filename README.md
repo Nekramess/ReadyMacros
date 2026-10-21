@@ -47,4 +47,4 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - Spec detection is a best guess and may open the wrong spec tab.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.
 - The spell ID report (`/rmac ids`), My Macros, weapon swap and paging have so far been tested only against a simulated game API, not in the live client.
-- The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. It has not yet been seen in the live Forever client.
+- The minimap button uses the standard LibDBIcon-1.0 library (embedded in `Libs/` with LibStub, CallbackHandler-1.0 and LibDataBroker-1.1), so minimap button managers handle it like any other button. Confirmed in the live client on 20 Oct 2026: with Leatrix Plus' "Enhance minimap" on, the old button was replaced and labelled a custom button, the new one is not (author's test).
