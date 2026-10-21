@@ -192,6 +192,14 @@ T.known = savedKnown
 cacheDB.spellIcons = {}
 T.eq(ns.MacroIcon({ body = "/cast Whirlwind" }), 134400, "never-seen spell without an ID stays on the default icon")
 
+-- Icons for spells nobody has learned: looked up by the verified icon-only spell ID
+T.textures = { [1752] = 6001 }          -- the simulated game knows the texture of spell 1752 (Sinister Strike)
+local savedKnown2 = T.known; T.known = {}
+local savedDB2 = ReadyMacrosDB.spellIcons; ReadyMacrosDB.spellIcons = {}
+T.eq(ns.MacroIcon({ body = "#showtooltip\n/cast Sinister Strike" }), 6001, "unlearned spell gets its icon through its icon-only spell ID")
+T.eq(ns.MacroIcon({ body = "/cast Mangle" }), 134400, "spell with no ID anywhere stays on the default icon")
+T.known = savedKnown2; ReadyMacrosDB.spellIcons = savedDB2; T.textures = nil
+
 -- Macro icons and editor delete/cancel
 T.eq(ns.MacroIcon({ body = "#showtooltip Charge\n/cast Charge" }), 5100, "icon from #showtooltip spell")
 T.eq(ns.MacroIcon({ body = "/cast [@mouseover,help][] Heroic Strike" }), 5078, "icon from first /cast spell")

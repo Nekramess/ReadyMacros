@@ -261,6 +261,12 @@ function ns.MacroIcon(m)
     end
     local ok, info = pcall(C_Spell.GetSpellInfo, spell)
     if ok and type(info) == "table" and info.iconID then return info.iconID end
+    -- Icon-only IDs (SPELL_ICON_IDS) cover spells the character hasn't learned yet.
+    local iconID = ns.SPELL_ICON_IDS and ns.SPELL_ICON_IDS[spell]
+    if iconID and C_Spell and C_Spell.GetSpellTexture then
+      local ok2, tex = pcall(C_Spell.GetSpellTexture, iconID)
+      if ok2 and tex then return tex end
+    end
     local cached = ReadyMacrosDB and ReadyMacrosDB.spellIcons and ReadyMacrosDB.spellIcons[spell]
     if cached then return cached end
   end

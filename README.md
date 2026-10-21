@@ -49,7 +49,7 @@ Ready Macros gives you a list of ready-made macros for every class and spec. Cli
 - Open the game's macro window with `/macro` and drag the new macro to your action bar.
 
 ## Known limits
-- Spell names are based on beta information and may change. 14 macros use a spell name that has not been confirmed yet, and they are marked in the list.
+- Spell names are based on beta information and may change. 0 macros use a spell name that has not been confirmed yet (checked against Wowhead's Forever spell lists on 21 Oct 2026; Mangle is the one name those lists don't show, and it is still marked as confirmed from earlier sources). Any macro with an unconfirmed name would be marked in the list.
 - Spell IDs, which are needed to show "learn later" instead of "missing", are currently included for Warrior spells and three Paladin spells (Purify, Blessing of Protection, Blessing of Freedom).
 - Spec detection is a best guess and may open the wrong spec page.
 - Existing macros are not updated automatically. Delete your copy and add it again to get a newer version.

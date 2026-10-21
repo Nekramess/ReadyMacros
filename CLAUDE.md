@@ -23,7 +23,7 @@ The addon was renamed before release. Never reintroduce the previous addon name 
 |---|---|
 | `ReadyMacros.toc` | Interface, Title, Version, `SavedVariables: ReadyMacrosDB`, file list |
 | `Data.lua` | Every macro: `ns.CLASS_ORDER`, `ns.UTILITY` ("Utility" = the "All specs" tab), `ns.CLASSES` |
-| `SpellIDs.lua` | `ns.SPELL_IDS`: spell name -> `{ id, level, talent?, stance? }` |
+| `SpellIDs.lua` | `ns.SPELL_IDS`: spell name -> `{ id, level, talent?, stance? }` (learned check); `ns.SPELL_ICON_IDS`: spell name -> Forever spell ID used only for icons (`C_Spell.GetSpellTexture`) |
 | `Verify.lua` | Spell check: parses `/cast` lines, `ns.CheckSpell`, `ns.CheckMacro`, `ns.UnlearnedLabel`, `ns.IDReport` |
 | `Libs/` | Embedded libraries (LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0), listed first in the `.toc` |
 | `Minimap.lua` | LibDataBroker launcher + LibDBIcon registration, `/rmac minimap` |
@@ -60,7 +60,7 @@ Name at most 16 characters; body at most 255; no duplicate name in a tab; the sa
 ## Verifying spell names and IDs
 
 - Wowhead's Forever database: `https://www.wowhead.com/forever/spell=<id>`. Accept an ID only when the page title ends in "Forever", the name matches exactly, and it requires the right class. Example trap: 403434 "Victory Rush" is listed as a Mage spell, so Warrior Victory Rush has no ID on file yet.
-- Wowhead search pages are blocked for automated fetches; direct spell pages work.
+- The cloud sandbox cannot reach wowhead.com (egress allowlist; WebFetch returns an empty page). Use the desktop app's built-in browser (grant `wowhead.com` with request_access, scope site): `/forever/spell=<id>` redirects to `/forever/spell=<id>/<slug>` (fine). Class lists: in a page on wowhead.com, `fetch('/forever/spells/abilities/<class>')` and `/talents/<class>` return HTML holding `var listviewspells = [...]` (parse with `new Function('return '+text)`); each entry has `id, name, level, rank, reqclass` (class bitmask: Warrior 1, Paladin 2, Hunter 4, Rogue 8, Priest 16, Shaman 64, Mage 128, Warlock 256, Druid 1024). Used 21 Oct 2026 to build `SPELL_ICON_IDS` and to confirm all 14 formerly unconfirmed names.
 - Icy Veins' Forever class overviews (`icy-veins.com/wow-forever/<class>-class-overview`) were the main name source. Boosting/SEO sites disagreed with each other; don't rely on them alone.
 - The player's client is the final word: `/rmac ids` lists NEW IDs from the spellbook with paste-ready lines, and `/dump C_Spell.GetSpellInfo("Spell Name")` shows a spell's ID.
 
@@ -91,8 +91,9 @@ The current release zip lives in the repo: `releases/ReadyMacros-v<Version>-fore
 
 ## Open items
 
-- 14 macros use spell names no Forever source confirmed (the README gives only the count; `grep -n "v = false }" Data.lua` lists them: Bestial Wrath, Counterspell, Divine Shield, Feign Death, Frost Nova, Hunter's Mark, Kick, Dispel Magic, Flash Heal, Moonfire, Polymorph, Renew, Mend Pet, Sinister Strike).
-- Spell IDs exist only for Warrior and three Paladin spells. Next step was IDs for the other classes, one class at a time.
+- No macro is `v = false` any more (all 14 formerly unconfirmed names were found in Wowhead's Forever class lists on 21 Oct 2026). "Mangle" (druid) is not in those lists (only "Engrave Gloves - Mangle"): check it in a druid's client. Spells with duplicate same-name entries (rune versions: Flash of Light, Righteous Fury, Lacerate, Tiger's Fury, Exorcism, Fire Blast, Chain Lightning, Lightning Bolt, Penance, Renew, Shadow Word: Death, Mutilate) use the classic rank 1 ID in `SPELL_ICON_IDS`; icon is assumed equal, not confirmed.
+- `SPELL_IDS` (learned check) still covers only Warrior and three Paladin spells; the list data above could extend it, but with the duplicates above it needs a decision per spell.
+- Whether `C_Spell.GetSpellTexture(id)` returns an icon for a spell the character hasn't learned is untested in the live client (the icon rows fall back to a question mark if it doesn't).
 - Asked, not yet answered: should Paladin MO Cleanse fall back to the player like Purify? Should Purify also appear in the Holy tab?
 - `/rmac ids` report box doesn't scroll.
 

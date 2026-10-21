@@ -101,6 +101,7 @@ function M.install(opts)
     if type(x) == "number" then local n = M.ids[x]; return n and { name = n, spellID = x, iconID = 5000 + x } or nil end
     local id = M.known[x]; return id and { name = x, spellID = id, iconID = 5000 + id } or nil
   end }
+  C_Spell.GetSpellTexture = function(id) if type(id) == "number" and M.textures and M.textures[id] then return M.textures[id] end end
   IsPlayerSpell = function(id) local n = M.ids[id]; return n ~= nil and M.known[n] ~= nil end
   -- Forever's real namespaces (Blizzard_APIDocumentationGenerated: SpellBookDocumentation, SpecializationInfoDocumentation)
   Enum = Enum or {}
