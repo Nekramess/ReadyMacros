@@ -110,26 +110,38 @@ ns.CLASSES = {
   ---------------------------------------------------------------------------
   -- Sources: icy-veins.com/wow-forever/paladin-class-overview (Holy Strike, Judgement spelling,
   -- Holy Shock, Flash of Light, Holy Light, Seal of Fury/Righteousness/Command, Consecration,
-  -- Exorcism, Cleanse, Righteous Fury). Divine Shield not confirmed there.
+  -- Exorcism, Cleanse, Righteous Fury). 7 Nov 2026: Blessing of Kings/Wisdom/Might, Seal of Righteousness,
+  -- Seal of Fury and Seal of the Crusader (note "the") confirmed in Wowhead's Forever Paladin ability list.
   PALADIN = {
     specs = { "Holy", "Protection", "Retribution" },
     macros = {
       Utility = {
         -- Blessings and Purify: friendly mouseover, else a friendly target, else yourself.
         { name = "MO BoP", desc = "Blessing of Protection on mouseover, else target, else yourself",
-          body = "#showtooltip Blessing of Protection\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Protection", v = true },
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Protection", v = true },
         { name = "MO Freedom", desc = "Blessing of Freedom on mouseover, else target, else yourself",
-          body = "#showtooltip Blessing of Freedom\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Freedom", v = true },
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Freedom", v = true },
         { name = "MO Purify", desc = "Purify on mouseover, else target, else yourself",
-          body = "#showtooltip Purify\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Purify", v = true },
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Purify", v = true },
+        { name = "MO Kings", desc = "Blessing of Kings on mouseover, else target, else yourself",
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Kings", v = true },
+        { name = "MO Wisdom", desc = "Blessing of Wisdom on mouseover, else target, else yourself",
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Wisdom", v = true },
+        { name = "MO Might", desc = "Blessing of Might on mouseover, else target, else yourself",
+          body = "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Might", v = true },
+        -- Seals: the macro always casts the highest rank you know, so the bar never needs updating.
+        { name = "Seal Righteous", desc = "Seal of Righteousness (always your highest rank)",
+          body = "#showtooltip\n/cast Seal of Righteousness", v = true },
+        { name = "Seal of Fury", desc = "Seal of Fury (always your highest rank)",
+          body = "#showtooltip\n/cast Seal of Fury", v = true },
+        { name = "Seal Crusader", desc = "Seal of the Crusader (always your highest rank)",
+          body = "#showtooltip\n/cast Seal of the Crusader", v = true },
         { name = "MO Cleanse", desc = "Cleanse mouseover, else target",
           body = "#showtooltip\n/cast [@mouseover,help,nodead][] Cleanse", v = true },
         { name = "MO Flash", desc = "Flash of Light on mouseover, else target",
           body = "#showtooltip\n/cast [@mouseover,help,nodead][] Flash of Light", v = true },
         { name = "Judgement", desc = "Start attacking + Judgement (keeps seal now)",
           body = "#showtooltip\n/startattack\n/cast Judgement", v = true },
-        { name = "Divine Shield", desc = "Divine Shield",
-          body = "#showtooltip\n/cast Divine Shield", v = true },
       },
       Holy = {
         { name = "MO Holy Shock", desc = "Holy Shock mouseover (heal or damage)",
@@ -145,7 +157,7 @@ ns.CLASSES = {
         { name = "Seal of Fury", desc = "Tank seal (judging it taunts)",
           body = "#showtooltip\n/cast Seal of Fury", nostart = "Seal, not an attack", v = true },
         { name = "MO Judge", desc = "Start attacking + Judgement on mouseover (taunts with Fury)",
-          body = "#showtooltip Judgement\n/startattack\n/cast [@mouseover,harm,nodead][] Judgement", v = true },
+          body = "#showtooltip\n/startattack\n/cast [@mouseover,harm,nodead][] Judgement", v = true },
         { name = "Consecration", desc = "Consecration",
           body = "#showtooltip\n/startattack\n/cast Consecration", v = true },
         { name = "Righteous Fury", desc = "Threat buff",

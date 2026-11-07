@@ -68,6 +68,20 @@ for _, spec in ipairs({ "Protection", "Retribution" }) do
   end
 end
 
+-- Paladin Utility: blessings try mouseover, then a friendly target, then self; seals cast by name (highest rank); no Divine Shield.
+do
+  local util = {}
+  for _, m in ipairs(ns.CLASSES.PALADIN.macros.Utility) do util[m.name] = m end
+  for _, b in ipairs({ { "MO Kings", "Blessing of Kings" }, { "MO Wisdom", "Blessing of Wisdom" }, { "MO Might", "Blessing of Might" } }) do
+    T.eq(util[b[1]] and util[b[1]].body,
+      "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] " .. b[2], b[1] .. " macro text")
+  end
+  for _, b in ipairs({ { "Seal Righteous", "Seal of Righteousness" }, { "Seal of Fury", "Seal of Fury" }, { "Seal Crusader", "Seal of the Crusader" } }) do
+    T.eq(util[b[1]] and util[b[1]].body, "#showtooltip\n/cast " .. b[2], b[1] .. " macro text")
+  end
+  T.check(not util["Divine Shield"], "Paladin Utility has no Divine Shield macro")
+end
+
 -- No macro may run Lua or change console settings.
 for key, c in pairs(ns.CLASSES) do
   for _, list in pairs(c.macros) do
