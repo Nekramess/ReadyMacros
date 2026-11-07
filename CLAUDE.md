@@ -48,7 +48,7 @@ The addon was renamed before release. Never reintroduce the previous addon name 
 
 Conventions:
 - Mouseover heals, dispels and DoTs: `[@mouseover,help,nodead][]` (falls back to target). Paladin Blessing of Protection, Blessing of Freedom and Purify try mouseover, then a friendly target, then the player: `[@mouseover,help,nodead][@target,help,nodead][@player]` (a plain `[@mouseover,help][@player]` skipped the target whenever the mouse was over an enemy, Anthony 7 Nov 2026).
-- Melee tabs (all Warrior and Rogue tabs; Paladin Protection/Retribution; Enhancement; Survival; Feral Combat): every macro has `/startattack`, or a `nostart` reason. Mouseover gap closers use `/startattack [@mouseover,harm,nodead][]`; mouseover shocks use plain `/startattack` so swings stay on the target; Rogue openers use `/startattack [nostealth]`.
+- Melee tabs (all Warrior and Rogue tabs; Paladin Protection/Retribution; Enhancement; Survival; Feral Combat): every macro has `/startattack`, or a `nostart` reason. Mouseover gap closers use `/startattack [@mouseover,harm,nodead][]`; mouseover shocks and Paladin MO Judge use plain `/startattack` so swings stay on the target (a damaging ability never gets `nostart`; Anthony 7 Nov 2026); Rogue openers use `/startattack [nostealth]`.
 - Warrior stances: Battle = 1, Defensive = 2, Berserker = 3.
 - Paladin spells "Judgement" (with the e). Warlock "Bane of Agony", not Curse of Agony.
 - Each class block in `Data.lua` has a comment naming the sources that confirmed its spells. Add to it when you add spells.

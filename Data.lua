@@ -144,8 +144,8 @@ ns.CLASSES = {
       Protection = {
         { name = "Seal of Fury", desc = "Tank seal (judging it taunts)",
           body = "#showtooltip\n/cast Seal of Fury", nostart = "Seal, not an attack", v = true },
-        { name = "MO Judge", desc = "Judgement on mouseover (taunt with Fury)",
-          body = "#showtooltip Judgement\n/cast [@mouseover,harm,nodead][] Judgement", nostart = "Taunts an off-target; keeps your swings on your main target", v = true },
+        { name = "MO Judge", desc = "Start attacking + Judgement on mouseover (taunts with Fury)",
+          body = "#showtooltip Judgement\n/startattack\n/cast [@mouseover,harm,nodead][] Judgement", v = true },
         { name = "Consecration", desc = "Consecration",
           body = "#showtooltip\n/startattack\n/cast Consecration", v = true },
         { name = "Righteous Fury", desc = "Threat buff",

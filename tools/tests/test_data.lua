@@ -58,6 +58,16 @@ for cls, specs in pairs(MELEE) do
   end
 end
 
+-- Damaging abilities on a melee tab must start auto-attack (nostart is only for buffs, cooldowns, traps and stealth tools).
+for _, spec in ipairs({ "Protection", "Retribution" }) do
+  for _, m in ipairs(ns.CLASSES.PALADIN.macros[spec]) do
+    if m.body:find("Judgement", 1, true) or m.body:find("Holy Strike", 1, true)
+        or m.body:find("Consecration", 1, true) or m.body:find("Exorcism", 1, true) then
+      T.check(m.body:find("/startattack", 1, true), ("Paladin %s: damaging macro '%s' must /startattack"):format(spec, m.name))
+    end
+  end
+end
+
 -- No macro may run Lua or change console settings.
 for key, c in pairs(ns.CLASSES) do
   for _, list in pairs(c.macros) do
