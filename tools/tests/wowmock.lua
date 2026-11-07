@@ -87,7 +87,8 @@ function M.install(opts)
   UnitClass = function() return class, class end
   UnitName = function() return "Tester" end
   GetRealmName = function() return "Forever" end
-  MAX_ACCOUNT_MACROS, MAX_CHARACTER_MACROS = 120, 18
+  -- Forever has no MAX_*_MACROS globals; the limits are in Constants.MacroConsts (Forever UI source, MacroConstantsDocumentation.lua).
+  Constants = { MacroConsts = { MAX_ACCOUNT_MACROS = 120, MAX_CHARACTER_MACROS = 30 } }
   GetNumMacros = function()
     local a, c = 0, 0
     for i in pairs(M.macros) do if i <= 120 then a = a + 1 else c = c + 1 end end

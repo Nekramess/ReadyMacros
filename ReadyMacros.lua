@@ -19,7 +19,9 @@ local selectedClass, selectedSpec, focusSpec
 local function Print(msg) print(PREFIX .. msg) end
 
 local function MaxCharMacros()
-  return MAX_CHARACTER_MACROS or 18
+  -- Forever keeps the limit in Constants.MacroConsts (30 per character); the old global does not exist there.
+  local c = Constants and Constants.MacroConsts
+  return (c and c.MAX_CHARACTER_MACROS) or MAX_CHARACTER_MACROS or 30
 end
 
 local function ClassName(key)

@@ -105,6 +105,27 @@ T.check(GetMacroIndexByName("MO Charge") > 120, "MO Charge created as a characte
 mo = goTo("MO Charge"); mo._scripts.OnClick(mo)
 T.check(T.lastPrint():find("already exists", 1, true), "second click is refused")
 
+-- Slot limit: Forever allows 30 character macros (Constants.MacroConsts), not 18
+do
+  local filled = {}
+  for i = 1, 20 do T.macros[121 + 10 + i] = { "Filler" .. i, 1, "x" }; filled[#filled + 1] = 121 + 10 + i end
+  local _, n = GetNumMacros()
+  T.check(n >= 18 and n < 30, "test setup: between 18 and 29 character macros (" .. n .. ")")
+  local m2 = goTo("Charge") or goTo("Heroic Strike")
+  m2 = m2 or (function() for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and GetMacroIndexByName(f.entry.macro.name) == 0 then return f end end end)()
+  T.check(m2, "found a macro that is not on the character yet")
+  m2._scripts.OnClick(m2)
+  T.check(not (T.lastPrint() or ""):find("slots are full", 1, true), "18+ character macros is not full (limit is 30)")
+  while select(2, GetNumMacros()) < 30 do local i = 121; while T.macros[i] do i = i + 1 end; T.macros[i] = { "Pad" .. i, 1, "x" } end
+  local m3
+  for _, f in ipairs(T.rows()) do if f.entry.kind == "macro" and GetMacroIndexByName(f.entry.macro.name) == 0 then m3 = f; break end end
+  T.check(m3, "found another macro that is not on the character yet")
+  m3._scripts.OnClick(m3)
+  T.check((T.lastPrint() or ""):find("slots are full", 1, true), "30 character macros is full")
+  for i = 1, 20 do T.macros[121 + 10 + i] = nil end
+  for i = 121, 300 do if T.macros[i] and T.macros[i][1]:find("^Pad") then T.macros[i] = nil end end
+end
+
 -- My Macros: import, save, reuse on another class, remove
 local saved = T.icon("SAVED"); saved._scripts.OnClick(saved)
 T.press("Import")
