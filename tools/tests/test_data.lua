@@ -82,6 +82,18 @@ do
   T.check(not util["Divine Shield"], "Paladin Utility has no Divine Shield macro")
 end
 
+-- Paladin: nothing in "All specs" is repeated in a spec section (the class view shows them on one page).
+do
+  local P = ns.CLASSES.PALADIN.macros
+  local inUtil = {}
+  for _, m in ipairs(P.Utility) do inUtil[m.name] = true end
+  for _, spec in ipairs(ns.CLASSES.PALADIN.specs) do
+    for _, m in ipairs(P[spec] or {}) do
+      T.check(not inUtil[m.name], ("Paladin %s: '%s' is already in All specs"):format(spec, m.name))
+    end
+  end
+end
+
 -- No macro may run Lua or change console settings.
 for key, c in pairs(ns.CLASSES) do
   for _, list in pairs(c.macros) do
