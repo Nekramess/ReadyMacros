@@ -6,9 +6,9 @@ Owner: Anthony (GitHub `Nekramess`). He values verified facts over confident gue
 
 ## Current state (keep this section up to date)
 
-- Version 0.9.0, `## Interface: 16001` (the number the Forever beta client reports; Anthony checked it in-game on 30 Sep 2026 with `/run print(select(4, GetBuildInfo()))`).
+- Version 0.9.1, `## Interface: 16001` (the number the Forever beta client reports; Anthony checked it in-game on 30 Sep 2026 with `/run print(select(4, GetBuildInfo()))`).
 - Commands: `/readymacros`, `/rmac`, `/rmac ids`, `/rmac minimap on|off`.
-- Seen working in the live client: the New macro editor (typing, bordered box), icon picker, row drag to action bar, the scrolling icon grid and spell icons for unlearned spells (Anthony 21 Oct 2026: "this UI is perfect"), class icon row, spec tabs, spell check colors and level labels (on a level 9 Warrior).
+- Seen working in the live client: the New macro editor (typing, bordered box), icon picker, row drag to action bar, the scrolling icon grid and spell icons for unlearned spells (Anthony 21 Oct 2026: "this UI is perfect"), the 30-macro limit fix (screenshot 7 Nov 2026: 21 / 30, adding works), class icon row, spec tabs, spell check colors and level labels (on a level 9 Warrior).
 - Tested only with the simulated client in `tools/tests/`: `/rmac ids`, My Macros (Saved, New macro editor with Alt-click edit via `ns.SaveCustom`/`ns.EditSaved`, Import), the Game macro window button (`ShowMacroFrame`) and row drag to action bar (`PickupMacro`; both names found in the Forever UI source, 20 Oct 2026; row drag to action bar confirmed working live by Anthony 20 Oct 2026), weapon swap, paging, `/startattack` changes, the Paladin blessing macros, the minimap button (`Minimap.lua`, tested in `tools/tests/test_minimap.lua`, which loads the real embedded libraries; button confirmed live 20 Oct 2026). The button is registered through the standard LibDBIcon-1.0 (embedded in `Libs/`: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0, all from public GitHub copies, 20 Oct 2026). A hand-built button made a minimap button manager show "This is a custom button. Please ask the addon author to use the standard LibDBIcon library instead." (CurseForge comment seen 20 Oct 2026; cause: Leatrix Plus 'Enhance minimap' replaces any named minimap Button without "LibDBIcon" in its name; fix confirmed live by Anthony's isolated test 20 Oct 2026); never hand-build a minimap button. LibDBIcon follows `GetMinimapShape` itself, so the old `square|round|auto` options are gone (saved `angle` becomes `minimapPos`).
 - Forever API notes (checked against the Forever UI source, 6 Oct 2026): spec detection uses `C_SpecializationInfo.GetSpecialization` with the global as fallback, and "known by ID" uses `C_SpellBook.IsSpellKnown(id, Enum.SpellBookSpellBank.Player)` with `IsPlayerSpell` as fallback; both globals are only deprecated shims in Forever (CVar `loadDeprecationFallbacks`). Not confirmed in the live client.
 - Unconfirmed: whether `/equipslot` works in Forever (and in combat); whether `IsPlayerSpell(rank1ID)` is true once a higher rank is learned; spec detection (`GetSpecialization` may not exist or match in Forever).
@@ -41,14 +41,16 @@ The addon was renamed before release. Never reintroduce the previous addon name 
 
 ```lua
 { name = "MO BoP", desc = "Blessing of Protection on mouseover, else yourself",
-  body = "#showtooltip Blessing of Protection\n/cast [@mouseover,help,nodead][@player] Blessing of Protection",
+  body = "#showtooltip Blessing of Protection\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] Blessing of Protection",
   v = true },                 -- true only if every spell name was confirmed by a Forever source
 -- nostart = "reason"         -- required in melee tabs when the macro has no /startattack
 ```
 
 Conventions:
-- Mouseover heals, dispels and DoTs: `[@mouseover,help,nodead][]` (falls back to target). Paladin Blessing of Protection, Blessing of Freedom and Purify fall back to the player: `[@mouseover,help,nodead][@player]`.
-- Melee tabs (all Warrior and Rogue tabs; Paladin Protection/Retribution; Enhancement; Survival; Feral Combat): every macro has `/startattack`, or a `nostart` reason. Mouseover gap closers use `/startattack [@mouseover,harm,nodead][]`; mouseover shocks use plain `/startattack` so swings stay on the target; Rogue openers use `/startattack [nostealth]`.
+- Mouseover heals, dispels and DoTs: `[@mouseover,help,nodead][]` (falls back to target). Paladin Blessing of Protection, Blessing of Freedom and Purify try mouseover, then a friendly target, then the player: `[@mouseover,help,nodead][@target,help,nodead][@player]` (a plain `[@mouseover,help][@player]` skipped the target whenever the mouse was over an enemy, Anthony 7 Nov 2026).
+- Melee tabs (all Warrior and Rogue tabs; Paladin Protection/Retribution; Enhancement; Survival; Feral Combat): every macro has `/startattack`, or a `nostart` reason. Mouseover gap closers use `/startattack [@mouseover,harm,nodead][]`; mouseover shocks and Paladin MO Judge use plain `/startattack` so swings stay on the target (a damaging ability never gets `nostart`; Anthony 7 Nov 2026); Rogue openers use `/startattack [nostealth]`.
+- `#showtooltip` is bare (no spell name) in Paladin macros: the game picks the spell from the `/cast` line (Anthony 7 Nov 2026; the icon code also reads the `/cast` line). Other classes still name the spell in places; convert when touching them. Seals and blessings cast by name so the highest rank is used. Seal of the Crusader is spelled with "the".
+- Macro slot limits come from `Constants.MacroConsts` (120 account, 30 character in Forever; Forever UI source `MacroConstantsDocumentation.lua`). The old globals `MAX_CHARACTER_MACROS`/`MAX_ACCOUNT_MACROS` do not exist there; the first version read the global and fell back to 18, so the addon said "slots are full" at 18 (Anthony, screenshot 7 Nov 2026). The mock now uses `Constants.MacroConsts` and no globals.
 - Warrior stances: Battle = 1, Defensive = 2, Berserker = 3.
 - Paladin spells "Judgement" (with the e). Warlock "Bane of Agony", not Curse of Agony.
 - Each class block in `Data.lua` has a comment naming the sources that confirmed its spells. Add to it when you add spells.

@@ -73,7 +73,8 @@ end
 function ns.CharacterMacros()
   local list = {}
   local numAccount, numChar = GetNumMacros()
-  local charOffset = MAX_ACCOUNT_MACROS or 120
+  local c = Constants and Constants.MacroConsts
+  local charOffset = (c and c.MAX_ACCOUNT_MACROS) or MAX_ACCOUNT_MACROS or 120
   local function add(index, perChar)
     local name, icon, body = GetMacroInfo(index)
     if name then list[#list + 1] = { name = name, icon = icon, body = body or "", perChar = perChar } end

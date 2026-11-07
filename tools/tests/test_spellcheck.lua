@@ -70,7 +70,7 @@ for _, m in ipairs(ns.CLASSES.PALADIN.macros.Utility) do
     local s, d = ns.CheckMacro(m, "PALADIN")
     T.eq(s, w[1], "level 9 Paladin: " .. m.name .. " status")
     T.eq((s == "unlearned") and ns.UnlearnedLabel(d) or "", w[2], "level 9 Paladin: " .. m.name .. " label")
-    T.check(m.body:find("[@mouseover,help,nodead][@player]", 1, true), m.name .. " falls back to the player")
+    T.check(m.body:find("[@mouseover,help,nodead][@target,help,nodead][@player]", 1, true), m.name .. " tries mouseover, then a friendly target, then the player")
     want[m.name] = nil
   end
 end

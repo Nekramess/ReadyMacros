@@ -58,6 +58,42 @@ for cls, specs in pairs(MELEE) do
   end
 end
 
+-- Damaging abilities on a melee tab must start auto-attack (nostart is only for buffs, cooldowns, traps and stealth tools).
+for _, spec in ipairs({ "Protection", "Retribution" }) do
+  for _, m in ipairs(ns.CLASSES.PALADIN.macros[spec]) do
+    if m.body:find("Judgement", 1, true) or m.body:find("Holy Strike", 1, true)
+        or m.body:find("Consecration", 1, true) or m.body:find("Exorcism", 1, true) then
+      T.check(m.body:find("/startattack", 1, true), ("Paladin %s: damaging macro '%s' must /startattack"):format(spec, m.name))
+    end
+  end
+end
+
+-- Paladin Utility: blessings try mouseover, then a friendly target, then self; seals cast by name (highest rank); no Divine Shield.
+do
+  local util = {}
+  for _, m in ipairs(ns.CLASSES.PALADIN.macros.Utility) do util[m.name] = m end
+  for _, b in ipairs({ { "MO Kings", "Blessing of Kings" }, { "MO Wisdom", "Blessing of Wisdom" }, { "MO Might", "Blessing of Might" } }) do
+    T.eq(util[b[1]] and util[b[1]].body,
+      "#showtooltip\n/cast [@mouseover,help,nodead][@target,help,nodead][@player] " .. b[2], b[1] .. " macro text")
+  end
+  for _, b in ipairs({ { "Seal Righteous", "Seal of Righteousness" }, { "Seal of Fury", "Seal of Fury" }, { "Seal Crusader", "Seal of the Crusader" } }) do
+    T.eq(util[b[1]] and util[b[1]].body, "#showtooltip\n/cast " .. b[2], b[1] .. " macro text")
+  end
+  T.check(not util["Divine Shield"], "Paladin Utility has no Divine Shield macro")
+end
+
+-- Paladin: nothing in "All specs" is repeated in a spec section (the class view shows them on one page).
+do
+  local P = ns.CLASSES.PALADIN.macros
+  local inUtil = {}
+  for _, m in ipairs(P.Utility) do inUtil[m.name] = true end
+  for _, spec in ipairs(ns.CLASSES.PALADIN.specs) do
+    for _, m in ipairs(P[spec] or {}) do
+      T.check(not inUtil[m.name], ("Paladin %s: '%s' is already in All specs"):format(spec, m.name))
+    end
+  end
+end
+
 -- No macro may run Lua or change console settings.
 for key, c in pairs(ns.CLASSES) do
   for _, list in pairs(c.macros) do
